@@ -1,6 +1,0 @@
-Model id: 2 and test MAE error: 22.619706630706787
-Model id: 3 and test MAE error: 32.29245471954346
-Model id: 4 and test MAE error: 34.976415157318115
-Model id: 5 and test MAE error: 44.23516845703125
-Model id: 6 and test MAE error: 42.44863510131836
-Model id: 7 and test MAE error: 44.049970626831055
