@@ -1,11 +1,50 @@
 import torch , os, sys
+import torch.nn as nn
 sys.path.append('/home/tanurima/germany/')
 import train_silo as sil
 import model as m
 import config
-from brain_age_parcels.utils import eval
+from sklearn.preprocessing import StandardScaler
+from torch.utils.data import DataLoader, TensorDataset
+from brain_age_parcels.utils import *
 import update_wts as wts , avg_wts as avg
 import avg_wts as hrm
+
+def evaluate_model(test_path, model_path):
+
+    X_test,y_test,silo_name = utils.preprocess(test_path)
+    # Load the model (assuming model_name corresponds to a model function or class)
+
+    model = m.AgePredictor(X_test.shape[1])
+    model.load_state_dict(torch.load(model_path, map_location=config.DEVICE))
+    model.to(config.DEVICE)
+    model.eval()
+
+    scaler = StandardScaler()
+    X_test = scaler.fit_transform(X_test)
+
+    # Convert to tensors
+    test_loader = DataLoader(
+        TensorDataset(torch.FloatTensor(X_test), torch.FloatTensor(y_test)),
+        batch_size=config.BATCH_SIZE, shuffle=True
+    )
+    
+    total_loss = 0.0
+    num_batches = 0
+    criterion = nn.L1Loss()
+    
+    with torch.no_grad():
+        for X_batch, y_batch in test_loader:
+            X_batch, y_batch = X_batch.to(config.DEVICE), y_batch.to(config.DEVICE)
+            y_batch = y_batch.view(-1, 1)
+            predictions = model(X_batch).view(-1, 1)
+            loss = criterion(predictions, y_batch)
+            total_loss += loss.item()
+            num_batches += 1
+
+    avg_loss = total_loss / num_batches if num_batches > 0 else float('inf')
+    print(f'\nTest error of {silo_name} : {avg_loss}\n')
+    return avg_loss
 
 def FL_weightedlocalgrads():
 
@@ -51,6 +90,11 @@ def FL_weightedlocalgrads():
         model_path = f'globalModel_{epoch+1}.pt'
         torch.save(model.state_dict(), model_path)
         print(f"{epoch+1}, global model weights updated")
+
+        for i in list(silos.keys()):
+            silo = silos[i]
+            test_path = f'/home/tanurima/germany/brain_age_parcels/{silo}/{silo}_test.csv'
+            silo_loss[silo].append(evaluate_model(test_path, model_path))
         
         os.remove(f'globalModel_{epoch}.pt')
         print(f"model Deleted: globalModel_{epoch}.pt")
@@ -100,7 +144,11 @@ def FL_weightedlocalglobalgrads():
         model_path = f'globalModel_{epoch+1}.pt'
         torch.save(model.state_dict(), model_path)
         print(f"{epoch+1}, global model weights updated")
-        #break
+
+        for i in list(silos.keys()):
+            silo = silos[i]
+            test_path = f'/home/tanurima/germany/brain_age_parcels/{silo}/{silo}_test.csv'
+            silo_loss[silo].append(evaluate_model(test_path, model_path))
 
         os.remove(f'globalModel_{epoch}.pt')
         print(f"model Deleted: globalModel_{epoch}.pt")
