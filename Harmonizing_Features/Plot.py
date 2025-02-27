@@ -5,7 +5,6 @@ import matplotlib.pyplot as plt
 import glob
 
 
-
 # Function to extract epoch number from file name to eventually sort it 
 def extract_epoch_number(file_path):
     match = re.search(r"Epoch(\d+)", file_path)
@@ -91,7 +90,7 @@ def local_loss_graphs(local_loss_folder, plot_name="local_test_loss",site_name="
     # Flatten lists if needed
     train_list_merged = [item for sublist in train_list for item in sublist]
     validate_list_merged = [item for sublist in validate_list for item in sublist]
-    test_list_merged = [item for sublist in test_list for item in sublist]
+
 
     num_epochs = len(train_list_merged)
 
@@ -100,8 +99,7 @@ def local_loss_graphs(local_loss_folder, plot_name="local_test_loss",site_name="
 
     plt.figure(figsize=(12, 6))
     plt.plot(train_list_merged, label="train", color='b')
-    plt.plot(validate_list_merged, label="validate", color='r') 
-    plt.plot(test_list_merged, label="test", color='g')   
+    plt.plot(validate_list_merged, label="validate", color='r')  
 
     plt.xticks(xticks_positions)  # Apply the calculated x-ticks
 
@@ -115,10 +113,10 @@ def local_loss_graphs(local_loss_folder, plot_name="local_test_loss",site_name="
     
 "-------------------------------------------------------final execution---------------------------------------------------------------"
 
-test_loss_folder=r"C:\Users\deoku\OneDrive\Documents\kunal\IIT_work\Julich_IIT_Collab\Test_loss_Parameters_Local_10_Fed_60_SGD"
+test_loss_folder="/home/kunaldeo/Julich_IIT_Collab/Test_loss_Parameters"
 test_loss_graph(test_loss_folder)
 
-local_loss_folder1=r"C:\Users\deoku\OneDrive\Documents\kunal\IIT_work\Julich_IIT_Collab\Federated_Parameters_Local_10_Fed_60_SGD\CamCAN"
-local_loss_folder2=r"C:\Users\deoku\OneDrive\Documents\kunal\IIT_work\Julich_IIT_Collab\Federated_Parameters_Local_10_Fed_60_SGD\SALD"
+local_loss_folder1="/home/kunaldeo/Julich_IIT_Collab/Federated_Parameters/CamCAN"
+local_loss_folder2="/home/kunaldeo/Julich_IIT_Collab/Federated_Parameters/SALD"
 local_loss_graphs(local_loss_folder1,"Local1_Test_Loss","CamCAN")
 local_loss_graphs(local_loss_folder2,"Local2_Test_Loss","SALD")

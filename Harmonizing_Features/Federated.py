@@ -1,3 +1,5 @@
+import os
+import pickle
 import pandas as pd
 import numpy as np
 from copy import deepcopy
@@ -127,10 +129,10 @@ if global_model_state == 'uninitialized':
     test_paths=test_paths,  # List of test dataset paths
     dataset_names=dataset_names,  # Corresponding names of the datasets
     device=device, 
-    lr=0.0012,  #SGD lr=0.0012
+    lr=0.0012,  #for SGD lr=0.0012
     weights_path=weights_path,
-    local_epochs=5, #SGD= 5
-    fed_epochs=120 #SGD =120
+    local_epochs=10, #for SGD= 10
+    fed_epochs=60 #for SGD =60
 )
     
 elif global_model_state == 'initialized':
@@ -144,9 +146,35 @@ elif global_model_state == 'initialized':
     device=device, 
     lr=0.0012,
     weights_path=weights_path,
-    local_epochs=5, 
-    fed_epochs=120
+    local_epochs=10, 
+    fed_epochs=60
 )   
 else:
     print("Wrong input")    
         
+# Define the base directories to save results
+federated_results_CamCAN_dir = "/home/kunaldeo/Julich_IIT_Collab/Federated_Parameters/CamCAN" #Save Local dataset CamCAN losses    
+federated_results_SALD_dir = "/home/kunaldeo/Julich_IIT_Collab/Federated_Parameters/SALD" #Save Local dataset SALD losses
+test_loss_results_dir = "/home/kunaldeo/Julich_IIT_Collab/Test_loss_Parameters"
+
+# Create directories if they do not exist
+os.makedirs(federated_results_SALD_dir, exist_ok=True)
+os.makedirs(federated_results_CamCAN_dir, exist_ok=True)
+os.makedirs(test_loss_results_dir, exist_ok=True)
+
+# Save the federated model parameters and test losses
+for i in parameter_list:
+    # Save SALD parameters
+    sald_path = os.path.join(federated_results_SALD_dir, f"SALD_parameters_Fed_Epoch{i}.pkl")
+    with open(sald_path, "wb") as f:
+        pickle.dump(parameter_list[i][0], f)
+
+    # Save CamCAN parameters
+    camcan_path = os.path.join(federated_results_CamCAN_dir, f"CamCAN_parameters_Fed_Epoch{i}.pkl")
+    with open(camcan_path, "wb") as f:
+        pickle.dump(parameter_list[i][1], f)
+
+    # Save test losses
+    test_loss_path = os.path.join(test_loss_results_dir, f"Test_losses_Fed_Epoch{i}.pkl")
+    with open(test_loss_path, "wb") as f:
+        pickle.dump(loss_dict[i], f)
