@@ -1,5 +1,6 @@
 import os
 import pickle
+import time
 import pandas as pd
 import numpy as np
 from copy import deepcopy
@@ -12,6 +13,8 @@ from Age_Predictor import AgePredictor,AgePredictionDataset,Train_Model
 
 class Federated():
     def federated_learning(global_model, silo1_data, silo2_data, test_paths, dataset_names, weights_path='best_weights_global_model.pth', fed_epochs=10, local_epochs=350, lr=0.00005, device=None):
+        start_time = time.time()  # Start timer
+
         gm = deepcopy(global_model).to(device)
         parameter_list = {}
         loss_dict = {i: {} for i in range(fed_epochs)}  # Initialize loss dictionary for federated epochs
@@ -27,7 +30,7 @@ class Federated():
             # Preprocess Silo1 data
             X_train1, X_val1, X_test1, y_train1, y_val1, y_test1 = Train_Model.preprocess_data(silo1_data, 'age') #Get the Train Test Validation Sets for Silo1
             
-            #train model1 on silo1 data locally
+            # Train model1 on silo1 data locally
             train_loss1, validate_loss1, test_loss1 = Train_Model.train_model(model1, X_train1, X_val1, X_test1, y_train1, y_val1, y_test1, local_epochs, lr, device)
             Silo1_parameters = {"training losses": train_loss1, "validate losses": validate_loss1, "test loss": test_loss1}
             temp_list.append(Silo1_parameters)
@@ -35,11 +38,10 @@ class Federated():
             # Preprocess Silo2 data
             X_train2, X_val2, X_test2, y_train2, y_val2, y_test2 = Train_Model.preprocess_data(silo2_data, 'age') #Get the Train Test Validation Sets for Silo2
             
-            #train model2 on silo2 data locally
+            # Train model2 on silo2 data locally
             train_loss2, validate_loss2, test_loss2 = Train_Model.train_model(model2, X_train2, X_val2, X_test2, y_train2, y_val2, y_test2, local_epochs, lr, device)
             Silo2_parameters = {"training losses": train_loss2, "validate losses": validate_loss2, "test loss": test_loss2}
             temp_list.append(Silo2_parameters)
-
 
             # Apply average gradients to global model (gm) 
             optimizer = torch.optim.SGD(gm.parameters(), lr=lr, weight_decay=1e-3) #,momentum=0.1
@@ -58,9 +60,7 @@ class Federated():
                     avg_grad = weight1 * param1.grad + weight2 * param2.grad  # Weighted sum of gradients
                     param3.grad = avg_grad  # Assign averaged gradients to global model
 
-            
-            for epoch in range(local_epochs): #Removing this for loop results in significant global model accuracy loss for some reason
-                optimizer.step()
+            optimizer.step()
 
             # Save updated global model
             torch.save(gm.state_dict(), weights_path)
@@ -89,8 +89,11 @@ class Federated():
 
                 loss_dict[fed_epoch][dataset_name] = round(total_test_loss / len(test_loader), 4)
 
-        return gm, parameter_list, loss_dict
+        end_time = time.time()  # End timer
+        elapsed_time = end_time - start_time
+        print(f"Total training time: {elapsed_time:.2f} seconds ({elapsed_time / 60:.2f} minutes)")
 
+        return gm, parameter_list, loss_dict
 
 
 
@@ -131,12 +134,12 @@ if global_model_state == 'uninitialized':
     device=device, 
     lr=0.0012,  #for SGD lr=0.0012
     weights_path=weights_path,
-    local_epochs=10, #for SGD= 10
-    fed_epochs=60 #for SGD =60
+    local_epochs=20, #for SGD= 20
+    fed_epochs=1200 #for SGD =1200
 )
     
 elif global_model_state == 'initialized':
-    Train_Model.train_model(global_model,X_train_global,X_val_global,X_test_global,y_train_global,y_val_global,y_test_global,epochs=50)
+    Train_Model.train_model(global_model,X_train_global,X_val_global,X_test_global,y_train_global,y_val_global,y_test_global,epochs=20) #Keeping epochs same as local epochs
     global_model_final, parameter_list, loss_dict = Federated.federated_learning(
     global_model, 
     silo1, 
@@ -146,8 +149,8 @@ elif global_model_state == 'initialized':
     device=device, 
     lr=0.0012,
     weights_path=weights_path,
-    local_epochs=10, 
-    fed_epochs=60
+    local_epochs=20, 
+    fed_epochs=1200  
 )   
 else:
     print("Wrong input")    
