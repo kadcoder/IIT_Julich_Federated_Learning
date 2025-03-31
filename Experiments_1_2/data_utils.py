@@ -3,9 +3,21 @@ from sklearn.preprocessing import StandardScaler
 from torch.utils.data import DataLoader, TensorDataset
 from config import train_ratio, BATCH_SIZE
 
-def preprocess(data_file_path):
-    silo_name = os.path.basename(os.path.dirname(data_file_path))
-    data = pd.read_csv(data_file_path)
+def preprocess(data_file):
+    #silo_name = os.path.basename(os.path.dirname(data_file_path))
+    #data = pd.read_csv(data_file_path)
+    
+    # Check if data_file is a string (file path) or a DataFrame
+    if isinstance(data_file, str):
+        if not os.path.exists(data_file):
+            raise FileNotFoundError(f"File not found: {data_file}")
+        silo_name = os.path.basename(os.path.dirname(data_file))
+        data = pd.read_csv(data_file)
+    elif isinstance(data_file, pd.DataFrame):
+        data = data_file
+        silo_name = ''
+    else:
+        raise TypeError("data_file should be a file path (str) or a pandas DataFrame")
     
     feature_columns = [str(i) for i in range(1, 1074)]  
     X = data[feature_columns].to_numpy().astype(np.float32)

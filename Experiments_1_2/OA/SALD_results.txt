@@ -1,0 +1,9 @@
+Max epochs: 5 and test MAE error: 39.54630661010742
+Max epochs: 10 and test MAE error: 38.191686153411865
+Max epochs: 20 and test MAE error: 34.20584440231323
+Max epochs: 30 and test MAE error: 31.275461196899414
+Max epochs: 50 and test MAE error: 25.0480694770813
+Max epochs: 80 and test MAE error: 14.821276783943176
+Max epochs: 100 and test MAE error: 9.482004880905151
+Max epochs: 150 and test MAE error: 6.884291887283325
+Max epochs: 200 and test MAE error: 6.433755576610565

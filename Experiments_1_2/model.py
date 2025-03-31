@@ -16,7 +16,7 @@ class AgePredictor(nn.Module):
 
         self.fc3 = nn.Linear(256, 1)
 
-    def initialize_weights(self):
+    def initialize_weights(self,m):
         for m in self.modules():
             if isinstance(m, nn.Linear):
                 nn.init.kaiming_normal_(m.weight, mode='fan_in', nonlinearity='leaky_relu', a=0.01)

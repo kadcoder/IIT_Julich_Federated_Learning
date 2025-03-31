@@ -1,0 +1,160 @@
+1
+Train on CamCAN | epochs: 0 | Train MAE error: 8.448016509744855
+Validate on CamCAN | epochs: 0 | Val MAE error: 12.013931681315107
+
+1
+Train on SALD | epochs: 0 | Train MAE error: 7.931883917914496
+Validate on SALD | epochs: 0 | Val MAE error: 7.897468511263529
+
+2
+Train on CamCAN | epochs: 1 | Train MAE error: 8.25152870019277
+Validate on CamCAN | epochs: 1 | Val MAE error: 11.436259549458821
+
+2
+Train on SALD | epochs: 1 | Train MAE error: 7.685748315740515
+Validate on SALD | epochs: 1 | Val MAE error: 7.679950404167175
+
+3
+Train on CamCAN | epochs: 2 | Train MAE error: 8.362081919776069
+Validate on CamCAN | epochs: 2 | Val MAE error: 11.563738454182944
+
+3
+Train on SALD | epochs: 2 | Train MAE error: 7.605290515334518
+Validate on SALD | epochs: 2 | Val MAE error: 7.797370553016663
+
+4
+Train on CamCAN | epochs: 3 | Train MAE error: 8.367637785275777
+Validate on CamCAN | epochs: 3 | Val MAE error: 11.400073801676431
+
+4
+Train on SALD | epochs: 3 | Train MAE error: 7.476937679008202
+Validate on SALD | epochs: 3 | Val MAE error: 7.28896996974945
+
+5
+Train on CamCAN | epochs: 4 | Train MAE error: 8.522821842299567
+Validate on CamCAN | epochs: 4 | Val MAE error: 11.339394785563153
+
+5
+Train on SALD | epochs: 4 | Train MAE error: 7.598400663446498
+Validate on SALD | epochs: 4 | Val MAE error: 7.25215425491333
+
+6
+Train on CamCAN | epochs: 5 | Train MAE error: 8.169967418246799
+Validate on CamCAN | epochs: 5 | Val MAE error: 11.327823282877603
+
+6
+Train on SALD | epochs: 5 | Train MAE error: 7.4959794362386045
+Validate on SALD | epochs: 5 | Val MAE error: 7.913808910051982
+
+7
+Train on CamCAN | epochs: 6 | Train MAE error: 8.342555652724371
+Validate on CamCAN | epochs: 6 | Val MAE error: 11.48503995259603
+
+7
+Train on SALD | epochs: 6 | Train MAE error: 7.6846346254701965
+Validate on SALD | epochs: 6 | Val MAE error: 6.614794238408407
+
+8
+Train on CamCAN | epochs: 7 | Train MAE error: 8.200960940784878
+Validate on CamCAN | epochs: 7 | Val MAE error: 11.97353089650472
+
+8
+Train on SALD | epochs: 7 | Train MAE error: 7.467530310595478
+Validate on SALD | epochs: 7 | Val MAE error: 6.708690015474955
+
+9
+Train on CamCAN | epochs: 8 | Train MAE error: 8.354182042015923
+Validate on CamCAN | epochs: 8 | Val MAE error: 11.754048436482748
+
+9
+Train on SALD | epochs: 8 | Train MAE error: 7.392835253256338
+Validate on SALD | epochs: 8 | Val MAE error: 7.277678736050924
+
+10
+Train on CamCAN | epochs: 9 | Train MAE error: 7.867870121532017
+Validate on CamCAN | epochs: 9 | Val MAE error: 11.160648104349773
+
+10
+Train on SALD | epochs: 9 | Train MAE error: 7.377643027128997
+Validate on SALD | epochs: 9 | Val MAE error: 7.696671501795451
+
+11
+Train on CamCAN | epochs: 10 | Train MAE error: 7.97320248550839
+Validate on CamCAN | epochs: 10 | Val MAE error: 10.030227597554525
+
+11
+Train on SALD | epochs: 10 | Train MAE error: 7.320756159888373
+Validate on SALD | epochs: 10 | Val MAE error: 7.570077037811279
+
+12
+Train on CamCAN | epochs: 11 | Train MAE error: 8.054722396532695
+Validate on CamCAN | epochs: 11 | Val MAE error: 11.768202629089357
+
+12
+Train on SALD | epochs: 11 | Train MAE error: 7.470663423891422
+Validate on SALD | epochs: 11 | Val MAE error: 6.495369068781534
+
+13
+Train on CamCAN | epochs: 12 | Train MAE error: 8.02926304075453
+Validate on CamCAN | epochs: 12 | Val MAE error: 11.153710060119629
+
+13
+Train on SALD | epochs: 12 | Train MAE error: 7.546974655433938
+Validate on SALD | epochs: 12 | Val MAE error: 6.847275352478027
+
+14
+Train on CamCAN | epochs: 13 | Train MAE error: 8.044523747762046
+Validate on CamCAN | epochs: 13 | Val MAE error: 10.381888745625814
+
+14
+Train on SALD | epochs: 13 | Train MAE error: 7.491879127643726
+Validate on SALD | epochs: 13 | Val MAE error: 6.214564021428426
+
+15
+Train on CamCAN | epochs: 14 | Train MAE error: 7.848195921050177
+Validate on CamCAN | epochs: 14 | Val MAE error: 12.371299095153809
+
+15
+Train on SALD | epochs: 14 | Train MAE error: 7.464968501196968
+Validate on SALD | epochs: 14 | Val MAE error: 6.586434372266134
+
+16
+Train on CamCAN | epochs: 15 | Train MAE error: 7.894895789358349
+Validate on CamCAN | epochs: 15 | Val MAE error: 12.092780125935873
+
+16
+Train on SALD | epochs: 15 | Train MAE error: 7.752540659021449
+Validate on SALD | epochs: 15 | Val MAE error: 6.120687127113342
+
+17
+Train on CamCAN | epochs: 16 | Train MAE error: 7.753052140606774
+Validate on CamCAN | epochs: 16 | Val MAE error: 11.628584734598796
+
+17
+Train on SALD | epochs: 16 | Train MAE error: 7.520908952642368
+Validate on SALD | epochs: 16 | Val MAE error: 6.23690668741862
+
+18
+Train on CamCAN | epochs: 17 | Train MAE error: 8.025564705000983
+Validate on CamCAN | epochs: 17 | Val MAE error: 10.67428091684977
+
+18
+Train on SALD | epochs: 17 | Train MAE error: 7.029411773328429
+Validate on SALD | epochs: 17 | Val MAE error: 7.134581804275513
+
+19
+Train on CamCAN | epochs: 18 | Train MAE error: 7.277702391147614
+Validate on CamCAN | epochs: 18 | Val MAE error: 10.06400177637736
+
+19
+Train on SALD | epochs: 18 | Train MAE error: 7.342055091151484
+Validate on SALD | epochs: 18 | Val MAE error: 6.321527886390686
+
+20
+Train on CamCAN | epochs: 19 | Train MAE error: 7.62605111334059
+Validate on CamCAN | epochs: 19 | Val MAE error: 10.70655356089274
+
+20
+Train on SALD | epochs: 19 | Train MAE error: 7.4648813035753045
+Validate on SALD | epochs: 19 | Val MAE error: 6.432604996363322
+

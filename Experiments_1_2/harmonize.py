@@ -15,7 +15,7 @@ def harmonize_localsilos(model,gradients):
                 data = gradients[silo]
                 grad_list = []
                 for epoch in list(data.keys()):
-                    layer_grad = data[epoch][name].cpu().numpy()
+                    layer_grad = data[epoch][name].cpu().numpy().reshape(-1) # Flatten the gradient
                     grad_list.append(layer_grad)
                     # Uncomment for debugging:
                     # print(f'{silo} and Epoch :{epoch} and Layer :{name} and Shape: {layer_grad.shape}')
@@ -77,7 +77,7 @@ def harmonize_localglobal(model,local_grads,global_grads):
             
             lgrad_list,ggrad_list = [],[]
             for epoch in list(local_grads.keys()):
-                layer_grad = local_grads[epoch][name].cpu().numpy()
+                layer_grad = local_grads[epoch][name].cpu().numpy().reshape(-1) # Flatten the gradient
                 lgrad_list.append(layer_grad)
             
             stacked = np.stack(lgrad_list, axis=0) # Stack the gradients along a new axis
@@ -93,7 +93,7 @@ def harmonize_localglobal(model,local_grads,global_grads):
             covars['batch'].extend(['local'] * n_silo)
             
             for epoch in list(global_grads.keys()):
-                layer_grad = global_grads[epoch][name].cpu().numpy()
+                layer_grad = global_grads[epoch][name].cpu().numpy().reshape(-1) # Flatten the gradient
                 ggrad_list.append(layer_grad)
                 # Uncomment for debugging:
                 # print(f'{silo} and Epoch :{epoch} and Layer :{name} and Shape: {layer_grad.shape}')
