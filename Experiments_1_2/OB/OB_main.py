@@ -1,7 +1,11 @@
 import pandas as pd,os,sys,matplotlib.pyplot as plt
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from training import train_centralmodel
-from evaluation import evaluate_centralmodel
+
+
+# adding the path of the parent directory
+project_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))          # noqa
+sys.path.append(project_dir)
+from lib.training import train_centralmodel         # noqa
+from lib.evaluation import evaluate_centralmodel    # noqa
 
 def experiment_OB(base_dir):
     silos = ['CamCAN', 'SALD']

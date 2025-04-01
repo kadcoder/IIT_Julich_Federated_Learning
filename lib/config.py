@@ -1,4 +1,5 @@
-import torch,numpy as np
+import torch
+import numpy as np
 
 # Configuration
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -14,7 +15,7 @@ INIT_LR = 1e-3
 WEIGHT_DECAY = 1e-5
 DROPOUT_RATE = 0.2
 PATIENCE = 10
-MAX_EPOCHS = [10,20,30,50] 
+MAX_EPOCHS = [10, 20, 30, 50]
 NUM_EPOCHS = 1
 train_ratio = 0.7
 MOMENTUM = 0.8
