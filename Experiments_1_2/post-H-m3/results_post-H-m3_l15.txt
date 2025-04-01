@@ -1,30 +1,24 @@
 Avg val loss on central data:22.71280492544174
-Time taken:7.756094895283847 mins
+Time taken:7.338336895600272 mins
 Test on CamCAN | epochs: 10 | Test MAE error: 13.650978660583496
 Test on SALD | epochs: 10 | Test MAE error: 5.748466968536377
 Test on eNki | epochs: 10 | Test MAE error: 8.272441591535296
 
 Avg val loss on central data:22.981823754310607
-Time taken:15.071469213400269 mins
+Time taken:14.312079889234155 mins
 Test on CamCAN | epochs: 20 | Test MAE error: 13.942481803894044
 Test on SALD | epochs: 20 | Test MAE error: 5.6867247223854065
 Test on eNki | epochs: 20 | Test MAE error: 7.927101952689035
 
 Avg val loss on central data:22.78007157444954
-Time taken:36.924486179166706 mins
-Test on CamCAN | epochs: 50 | Test MAE error: 14.878983116149902
-Test on SALD | epochs: 50 | Test MAE error: 6.362386465072632
-Test on eNki | epochs: 50 | Test MAE error: 8.589831556592669
+Time taken:22.022317042032956 mins
+Test on CamCAN | epochs: 30 | Test MAE error: 15.12119369506836
+Test on SALD | epochs: 30 | Test MAE error: 6.528573036193848
+Test on eNki | epochs: 30 | Test MAE error: 8.551447187151227
 
-Avg val loss on central data:22.71280492544174
-Time taken:21.5103143139005 mins
-Test on CamCAN | epochs: 30 | Test MAE error: 13.961605262756347
-Test on SALD | epochs: 30 | Test MAE error: 6.044475436210632
-Test on eNki | epochs: 30 | Test MAE error: 8.369492735181536
-
-Avg val loss on central data:22.71280492544174
-Time taken:10.690050525365708 mins
-Test on CamCAN | epochs: 15 | Test MAE error: 14.780904388427734
-Test on SALD | epochs: 15 | Test MAE error: 5.8446444272994995
-Test on eNki | epochs: 15 | Test MAE error: 8.393003804343087
+Avg val loss on central data:23.213870304822922
+Time taken:37.35988085148274 mins
+Test on CamCAN | epochs: 50 | Test MAE error: 11.426756668090821
+Test on SALD | epochs: 50 | Test MAE error: 6.135902762413025
+Test on eNki | epochs: 50 | Test MAE error: 8.98347554888044
 

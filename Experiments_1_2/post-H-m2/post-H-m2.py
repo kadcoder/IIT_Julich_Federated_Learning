@@ -122,6 +122,7 @@ def post_H_m2(base_dir):
                 print(f'Test on {silo} | epochs: {epochs} | Test MAE error: {avg_loss}')
                 f.write(f'Test on {silo} | epochs: {epochs} | Test MAE error: {avg_loss}\n')
         f.write('\n')
+        
         # Flatten nested lists if necessary.
         camcan_train = np.array(loss_history['CamCAN']['train']).flatten()
         camcan_val   = np.array(loss_history['CamCAN']['val']).flatten()

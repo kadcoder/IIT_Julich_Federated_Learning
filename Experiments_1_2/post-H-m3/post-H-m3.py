@@ -75,6 +75,8 @@ def post_H_m3(base_dir):
                 grads, train_losses, val_losses,scaler = train_localglobal(train_path, model_global, total_samples)
                 silo_scalers[silo] = scaler
                 silo_grads[f'{silo}'] = grads
+                loss_history[f'{silo}']['train'].extend(train_losses)
+                loss_history[f'{silo}']['val'].extend(val_losses)
                 f2.write(f'{(epoch+1)}\n')
                 f2.write(f'Train on {silo} | epochs: {epoch} | Train MAE error: {sum(train_losses)/len(train_losses)}\n')
                 f2.write(f'Validate on {silo} | epochs: {epoch} | Val MAE error: {sum(val_losses)/len(val_losses)}\n')
