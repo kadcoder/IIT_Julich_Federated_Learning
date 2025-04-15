@@ -1,0 +1,12 @@
+Description,Value
+Initial global model loss on central data,22.855554080009462
+
+Final Evaluation Results
+Test on CamCAN,Epochs: 200,Test MAE: 7.480494022369385
+Test on SALD,Epochs: 200,Test MAE: 5.192336559295654
+Test on eNKI,Epochs: 200,Test MAE: 8.094619342258998
+Final Evaluation Results on global model
+Test on CamCAN,Epochs: 200,Test MAE: 10.300822448730468
+Test on SALD,Epochs: 200,Test MAE: 8.414915323257446
+Test on eNKI,Epochs: 200,Test MAE: 8.094619342258998
+Total Time (mins),4.598958956481268
