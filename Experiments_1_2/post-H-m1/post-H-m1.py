@@ -1,175 +1,256 @@
-import os, torch, time as t,numpy as np,sys
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+#%%
+import os
+import torch
+import time as t
+import numpy as np
+import csv
+import sys
 import matplotlib.pyplot as plt
-from data_utils import *
-from model import *
-from data_utils import preprocess
-from training import train_globalmodel,train_localmodel
-from evaluation import evaluate_model,predict_age
-from config import INIT_LR, MAX_EPOCHS,DEVICE, MOMENTUM,GRADIENT_CLIP,GLOBAL_SCALER
+from sklearn.preprocessing import StandardScaler
 
-def post_H_m1(base_dir):
-    silodata_path =os.path.join(base_dir,'silo_Datasets')
+project_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))          # noqa
+sys.path.append(project_dir)
 
-    all_silos = ['CamCAN', 'SALD','eNki']
-    test_files = {silo: os.path.join(silodata_path,f'{silo}/Test_{silo}.csv') for silo in all_silos}
-    
-    lr = INIT_LR
+from lib.data_utils import preprocess                                                               # noqa
+from lib.model import AgePredictor                                                                  # noqa                        
+from lib.utils import ensure_dir, plot_loss_curves                                                  # noqa
+from lib.data_utils import preprocess                                                               # noqa
+from lib.training import train_globalmodel, train_localmodel                                        # noqa
+from lib.evaluation import evaluate_model, predict_age                                              # noqa
+from lib.config import DEVICE, GLOBAL_SCALER                               # noqa
+#%%
 
-    f =open(f'results_post-H-m1_l15.txt', 'a')
-    dir_path = os.path.join(base_dir,'post-H-m1/train_val_losses') 
-    if not os.path.exists(dir_path):
-        os.makedirs(dir_path)
-        print(f"Directory created: {dir_path}")
+# #####################
+# Experiment parameters #######################
+Global_epoch = 200
+federated_epochs = 15
+dropout_rate = 0.2
+lr = 1e-3
+# Learning rate and scheduler setup
+current_lr = 1e-3
+gradient_clip = 1.0
+momentum = 0.8
+# #############################################
 
-    for epochs in MAX_EPOCHS:
-        #losses = {silo : [] for silo in all_silos}
-        # Dictionaries to store loss histories for dynamic plotting
-        loss_history = {
-            'CamCAN': {'train': [], 'val': []},
-            'SALD':   {'train': [], 'val': []},
-            'eNki':   {'train': [], 'val': []}  # using 'train' to store avg_global_loss from train_globalmodel
-        }
+silodata_path = os.path.join(project_dir, 'silo_Datasets')
+# TODO change enki
+all_silos = ['CamCAN', 'SALD', 'eNKI']
+local_silos = ['CamCAN', 'SALD']
 
-        model_global = AgePredictor(input_size=1073).to(DEVICE)
-        model_global.initialize_weights(model_global)
-        silos = ['CamCAN', 'SALD']
-        total_samples = 0
+test_files = {silo: os.path.join(silodata_path, f'{silo}/Test_{silo}.csv') for silo in all_silos}   # noqa
 
-        for silo in silos:
-            path = os.path.join(silodata_path,f'{silo}/Train_{silo}.csv')
-            X,_,_ = preprocess(path)
-            total_samples += X.shape[0]
-
-        model_global = AgePredictor(input_size=1073).to(DEVICE)
-        model_global.initialize_weights(model_global)
-        global_path = os.path.join(silodata_path,f'eNki/Train_eNki.csv')
-        model_global,avg_global_loss,train_losses,val_losses,GLOBAL_SCALER = train_globalmodel(model_global,global_path,total_samples)
-
-        # Log the initial global loss
-        loss_history['eNki']['train'].append(train_losses)
-        loss_history['eNki']['val'].append(val_losses)
-        #zeros_list = [0] * len(loss_history['eNki']['train'])
-        loss_history['CamCAN']['train'] = train_losses
-        loss_history['CamCAN']['val'] = val_losses
-        loss_history['SALD']['train'] = train_losses
-        loss_history['SALD']['val'] = val_losses
-
-        # Initialize momentum buffers
-        velocity = {name: torch.zeros_like(param.data) for name, param in model_global.named_parameters()}
-        
-        f2 = open(f'train_val_losses/post-H-m1_train_val_loss_localsilo_l15_{epochs}.txt','w')
-        silo_scalers = {}
-
-        # Learning rate and scheduler setup
-        current_lr = INIT_LR
-        st_t = t.perf_counter()
-
-        for epoch in range(epochs):  # Global Epochs
-
-            aggregated_gradients = None
-
-            for silo in silos: # Local Epochs
-                train_path = os.path.join(silodata_path,f'{silo}/Train_harmonized_{silo}.csv')
-                grads, train_losses, val_losses,scaler = train_localmodel(train_path, model_global, total_samples)
-                silo_scalers[silo] = scaler
-                loss_history[f'{silo}']['train'].extend(train_losses)
-                loss_history[f'{silo}']['val'].extend(val_losses)
-                f2.write(f'{(epoch+1)}\n')
-                f2.write(f'Train on {silo} | epochs: {epoch} | Train MAE error: {sum(train_losses)/len(train_losses)}\n')
-                f2.write(f'Validate on {silo} | epochs: {epoch} | Val MAE error: {sum(val_losses)/len(val_losses)}\n')
-                f2.write('\n')
-                
-                if aggregated_gradients is None:
-                    aggregated_gradients = grads
-                else: 
-                    aggregated_gradients = {key1 : g1 + g2 for (key1, g1), (key1, g2) in zip(aggregated_gradients.items(), grads.items())}
+# Dictionaries to store loss histories for dynamic plotting
+loss_history = {
+    'CamCAN': {'train': [], 'val': []},
+    'SALD':   {'train': [], 'val': []},
+    'eNki':   {'train': [], 'val': []}  # using 'train' to store avg_global_loss from train_globalmodel
+}
 
 
-            # Clip gradients
-            if GRADIENT_CLIP is not None:
+total_samples = 0
+for silo in local_silos:
+    path = os.path.join(silodata_path, f'{silo}/Train_{silo}.csv')
+    X, _, _ = preprocess(path)
+    total_samples += X.shape[0]
+
+model_global = AgePredictor(input_size=1073).to(DEVICE)                                                          # noqa
+model_global.initialize_weights(model_global)
+global_path = os.path.join(silodata_path, f'eNKI/Train_eNKI.csv')
+model_global, avg_global_loss, train_losses, val_losses = train_globalmodel(model_global,           # noqa
+                                                                            global_path,            # noqa
+                                                                            total_samples)          # noqa        
+
+# Save initial global loss to CSV
+initial_results_path = os.path.join(project_dir, 'Experiments_1_2/post-H-m1/results_post-H-m1/post-H-m1_l15.csv')
+os.makedirs(os.path.dirname(initial_results_path), exist_ok=True)  # Create directory if missing
+
+with open(initial_results_path, 'w', newline='') as csvfile:
+    writer = csv.writer(csvfile)
+    writer.writerow(['Description', 'Value'])
+    writer.writerow(['Initial global model loss on central data', avg_global_loss])
+
+# Log the initial global loss
+loss_history['eNki']['train'].append(train_losses)
+loss_history['eNki']['val'].append(val_losses)
+#zeros_list = [0] * len(loss_history['eNki']['train'])
+loss_history['CamCAN']['train'] = train_losses
+loss_history['CamCAN']['val'] = val_losses
+loss_history['SALD']['train'] = train_losses
+loss_history['SALD']['val'] = val_losses
+
+# Initialize momentum buffers
+velocity = {name: torch.zeros_like(param.data) for name, param in model_global.named_parameters()}      # noqa
+
+#f2 = open(f'pre-H_train_val_loss_localsilo_l15_{Global_epoch}.txt', 'w')
+silo_scalers = {}
+
+st_t = t.perf_counter()
+
+best_val_loss_silo = {silo: float('inf') for silo in local_silos}  # Initialize best validation loss for each silo
+best_model_silo = {silo: None for silo in local_silos}  # Initialize best model for each silo
+
+X_train_silo = {}
+y_train_silo = {}
+
+for silo in local_silos:  # Local Epochs
+    train_path = os.path.join(silodata_path, f'{silo}/Train_harmonized_{silo}.csv')
+
+    X, y, silo = preprocess(train_path)
+    X_train_silo[silo] = X
+    y_train_silo[silo] = y
+
+csv_loss_path = os.path.join(project_dir, f'Experiments_1_2/post-H-m1/results_post-H-m1/train_val_loss_localsilo_l15.csv')
+with open(csv_loss_path, mode='w', newline='') as f2:
+    writer = csv.writer(f2)
+    writer.writerow(['Epoch', 'Silo', 'Train_MAE', 'Val_MAE'])  # header
+
+    for epoch in range(Global_epoch):
+        aggregated_gradients = None
+
+        for silo in local_silos:
+            print(f"Round {epoch+1}: Training on {silo}")
+            X_silo_current = X_train_silo[silo]
+            y_silo_current = y_train_silo[silo]
+
+            grads, train_losses, val_losses, best_val_loss, best_model = train_localmodel(
+                X_silo=X_silo_current,
+                y_silo=y_silo_current,
+                model=model_global,
+                total_samples=total_samples,
+                epochs=federated_epochs,
+                best_val_loss=best_val_loss_silo[silo]
+            )
+
+            best_model_silo[silo] = best_model
+            best_val_loss_silo[silo] = best_val_loss
+
+            loss_history[f'{silo}']['train'].extend(train_losses)
+            loss_history[f'{silo}']['val'].extend(val_losses)
+
+            # Write to CSV
+            avg_train_mae = sum(train_losses) / len(train_losses)
+            avg_val_mae = sum(val_losses) / len(val_losses)
+            writer.writerow([epoch + 1, silo, avg_train_mae, avg_val_mae])
+
+            # Aggregate gradients
+            if aggregated_gradients is None:
+                aggregated_gradients = grads
+            else:
                 aggregated_gradients = {
-                    k: torch.clamp(v, -GRADIENT_CLIP, GRADIENT_CLIP)
-                    for k, v in aggregated_gradients.items()
+                    key1: g1 + g2
+                    for (key1, g1), (key1, g2) in zip(aggregated_gradients.items(), grads.items())
                 }
 
-            # Update global model with momentum
-            with torch.no_grad():
-                for name, param in model_global.named_parameters():
-                    velocity[name] = MOMENTUM * velocity[name] + aggregated_gradients[name]
-                    param -= current_lr * velocity[name]
+        # Clip gradients
+        if gradient_clip is not None:
+            aggregated_gradients = {
+                k: torch.clamp(v, -gradient_clip, gradient_clip)
+                for k, v in aggregated_gradients.items()
+            }
 
-            print(f"Round {epoch+1}: Updated Global Model Weights")
+        # Update global model with momentum
+        with torch.no_grad():
+            for name, param in model_global.named_parameters():
+                velocity[name] = momentum * velocity[name] + aggregated_gradients[name]
+                param -= current_lr * velocity[name]
 
-        f2.close()
+        print(f"Round {epoch+1}: Updated Global Model Weights")
 
-        end_t = t.perf_counter()
+f2.close()
 
-        f.write(f'Avg val loss on central data:{avg_global_loss}\n')
-        f.write(f'Time taken:{(end_t-st_t)/60.0} mins\n')
+end_t = t.perf_counter()
 
-        for silo, test_path in test_files.items():
-            if silo == 'eNki':
-                avg_loss = evaluate_model(test_path,model_global,GLOBAL_SCALER)  # Evaluate on each test set
-                predict_age(model_global,test_path,GLOBAL_SCALER,epochs)
-                print(f'Test on {silo} | epochs: {epochs} | Test MAE error: {avg_loss}')
-                f.write(f'Test on {silo} | epochs: {epochs} | Test MAE error: {avg_loss}\n')
-            else:
-                scaler = silo_scalers[silo]
-                avg_loss = evaluate_model(test_path,model_global,scaler)
-                predict_age(model_global,test_path,scaler,epochs)
-                print(f'Test on {silo} | epochs: {epochs} | Test MAE error: {avg_loss}')
-                f.write(f'Test on {silo} | epochs: {epochs} | Test MAE error: {avg_loss}\n')
-        f.write('\n')
+global_scaler = StandardScaler()
+X_train, _, _ = preprocess(global_path)
+global_scaler.fit(X_train)
+silo_scalers["eNKI"] = global_scaler  # Store the scaler for eNki
 
-        # Flatten nested lists if necessary.
-        camcan_train = np.array(loss_history['CamCAN']['train']).flatten()
-        camcan_val   = np.array(loss_history['CamCAN']['val']).flatten()
-        sald_train   = np.array(loss_history['SALD']['train']).flatten()
-        sald_val     = np.array(loss_history['SALD']['val']).flatten()
+for silo in local_silos:  # Local Epochs
+    train_path = os.path.join(silodata_path, f'{silo}/Train_harmonized_{silo}.csv')
+    X_train, _, silo = preprocess(train_path)
 
-        # Create full x-axis values based on the length of each list.
-        x_camcan = range(1, len(camcan_train) + 1)
-        x_camcan_val = range(1, len(camcan_val) + 1)
-        x_sald = range(1, len(sald_train) + 1)
-        x_sald_val = range(1, len(sald_val) + 1)
+    silo_scaler = StandardScaler()
+    silo_scaler.fit(X_train)
+    # Store the scaler for each silo in a dictionary
+    silo_scalers[silo] = silo_scaler
 
-        # Create a figure with two subplots side by side.
-        fig, (ax_camcan, ax_sald) = plt.subplots(1, 2, figsize=(12, 5))
+results_age_path = os.path.join(project_dir, 'Experiments_1_2/post-H-m1/results_post-H-m1/predictions')
+# Save final test results to the same CSV
+with open(initial_results_path, 'a', newline='') as csvfile:
+    writer = csv.writer(csvfile)
+    writer.writerow([])
+    writer.writerow(['Final Evaluation Results'])
 
-        # Plot CamCAN losses on the first subplot using all data points.
-        ax_camcan.plot(x_camcan, camcan_train, label='Train Loss', color='blue', marker='o', markersize=3)
-        ax_camcan.plot(x_camcan_val, camcan_val, label='Validation Loss', color='red', marker='o', markersize=3)
-        ax_camcan.set_title("CamCAN Losses")
-        ax_camcan.set_xlabel("Epoch")
-        ax_camcan.set_ylabel("Loss")
-        ax_camcan.legend()
-        ax_camcan.grid(True)
-        # Set x-ticks with a gap of 50
-        ax_camcan.set_xticks(range(1, len(camcan_train) + 1, 50))
+    for silo, test_path in test_files.items():
+        if silo == 'eNKI':
+            avg_loss = evaluate_model(test_path, model_global, global_scaler)
+            #predict_age(model_global, test_path, results_age_path ,global_scaler)
+        else:
+            scaler_silo = silo_scalers[silo]
+            best_model_sile = best_model_silo[silo]
+            avg_loss = evaluate_model(test_path, best_model_sile, scaler_silo)
+            #predict_age(best_model_sile, test_path, results_age_path,scaler_silo)
+        writer.writerow([f'Test on {silo}', f'Epochs: {Global_epoch}', f'Test MAE: {avg_loss}'])
+    
+    writer.writerow(['Final Evaluation Results on global model'])
 
-        # Plot SALD losses on the second subplot using all data points.
-        ax_sald.plot(x_sald, sald_train, label='Train Loss', color='blue', marker='o', markersize=3)
-        ax_sald.plot(x_sald_val, sald_val, label='Validation Loss', color='red', marker='o', markersize=3)
-        ax_sald.set_title("SALD Losses")
-        ax_sald.set_xlabel("Epoch")
-        ax_sald.set_ylabel("Loss")
-        ax_sald.legend()
-        ax_sald.grid(True)
-        # Set x-ticks with a gap of 50
-        ax_sald.set_xticks(range(1, len(sald_train) + 1, 50))
+    for silo, test_path in test_files.items():
+        if silo == 'eNKI':
+            avg_loss = evaluate_model(test_path, model_global, global_scaler)
+            predict_age(model_global, test_path, results_age_path ,global_scaler)
+        else:
+            scaler_silo = silo_scalers[silo]
+            avg_loss = evaluate_model(test_path, model_global, scaler_silo)
+            predict_age(model_global, test_path, results_age_path,scaler_silo)
+        writer.writerow([f'Test on {silo}', f'Epochs: {Global_epoch}', f'Test MAE: {avg_loss}'])
 
-        # Adjust layout, save the figure, and display it.
-        plt.tight_layout()
-        plt.savefig(os.path.join(dir_path, f'losses_{epochs}.png'))
-        plt.show()
-        plt.close(fig)
+    writer.writerow(['Total Time (mins)', (end_t - st_t) / 60.0])
 
-        del model_global
-   
-    f.close()
-                 
-if __name__ =='__main__':
-    #base_dir = input("Enter the base directory:") 
-    base_dir = "/home/tanurima/germany/brain_age_parcels/Experiments_1_2"
-    post_H_m1(base_dir)
+
+plot_loss_curves(loss_history, project_dir, 'Experiments_1_2/post-H-m1/results_post-H-m1/')  # Plotting function
+"""
+plot_path = os.path.join(project_dir, 'Experiments_1_2/post-H-m1/results_post-H-m1/')
+ensure_dir(plot_path)
+
+# Flatten nested lists if needed
+camcan_train = np.ravel(loss_history['CamCAN']['train'])
+camcan_val   = np.ravel(loss_history['CamCAN']['val'])
+sald_train   = np.ravel(loss_history['SALD']['train'])
+sald_val     = np.ravel(loss_history['SALD']['val'])
+
+# X-axis for epochs
+epochs_camcan = np.arange(1, len(camcan_train) + 1)
+epochs_sald   = np.arange(1, len(sald_train) + 1)
+
+# Plotting
+fig, axes = plt.subplots(1, 2, figsize=(20, 10))
+
+# CamCAN subplot
+axes[0].plot(epochs_camcan, camcan_train, label='Train Loss', color='blue', marker='o', markersize=2)
+axes[0].plot(epochs_camcan, camcan_val, label='Validation Loss', color='red', marker='o', markersize=2)
+axes[0].set_title("CamCAN Losses")
+axes[0].set_xlabel("Epoch")
+axes[0].set_ylabel("Loss")
+axes[0].legend()
+axes[0].grid(True)
+axes[0].set_xticks(np.arange(1, len(camcan_train) + 1, 200))
+
+# SALD subplot
+axes[1].plot(epochs_sald, sald_train, label='Train Loss', color='blue', marker='o', markersize=2)
+axes[1].plot(epochs_sald, sald_val, label='Validation Loss', color='red', marker='o', markersize=2)
+axes[1].set_title("SALD Losses")
+axes[1].set_xlabel("Epoch")
+axes[1].set_ylabel("Loss")
+axes[1].legend()
+axes[1].grid(True)
+axes[1].set_xticks(np.arange(1, len(sald_train) + 1, 200))
+
+# Finalize and save
+plt.tight_layout()
+plt.savefig(os.path.join(plot_path, 'losses.png'))
+plt.show()
+plt.close(fig)
+"""
+
+del model_global
+del best_model_silo
