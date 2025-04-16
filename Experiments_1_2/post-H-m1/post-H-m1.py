@@ -27,7 +27,7 @@ federated_epochs = 15
 dropout_rate = 0.2
 lr = 1e-3
 # Learning rate and scheduler setup
-current_lr = 1e-3
+current_lr = 5e-4 #1e-3
 gradient_clip = 1.0
 momentum = 0.8
 # #############################################
@@ -62,7 +62,8 @@ model_global, avg_global_loss, train_losses, val_losses = train_globalmodel(mode
 
 # Save initial global loss to CSV
 initial_results_path = os.path.join(project_dir, 'Experiments_1_2/post-H-m1/results_post-H-m1/post-H-m1_l15.csv')
-os.makedirs(os.path.dirname(initial_results_path), exist_ok=True)  # Create directory if missing
+ensure_dir(initial_results_path)  # Ensure the directory exists
+#os.makedirs(os.path.dirname(initial_results_path), exist_ok=True)  # Create directory if missing
 
 with open(initial_results_path, 'w', newline='') as csvfile:
     writer = csv.writer(csvfile)
@@ -81,7 +82,6 @@ loss_history['SALD']['val'] = val_losses
 # Initialize momentum buffers
 velocity = {name: torch.zeros_like(param.data) for name, param in model_global.named_parameters()}      # noqa
 
-#f2 = open(f'pre-H_train_val_loss_localsilo_l15_{Global_epoch}.txt', 'w')
 silo_scalers = {}
 
 st_t = t.perf_counter()
@@ -200,57 +200,13 @@ with open(initial_results_path, 'a', newline='') as csvfile:
             predict_age(model_global, test_path, results_age_path ,global_scaler)
         else:
             scaler_silo = silo_scalers[silo]
-            avg_loss = evaluate_model(test_path, model_global, scaler_silo)
-            predict_age(model_global, test_path, results_age_path,scaler_silo)
+            avg_loss = evaluate_model(test_path, model_global, silo_scaler)
+            predict_age(model_global, test_path, results_age_path, silo_scaler)
         writer.writerow([f'Test on {silo}', f'Epochs: {Global_epoch}', f'Test MAE: {avg_loss}'])
 
     writer.writerow(['Total Time (mins)', (end_t - st_t) / 60.0])
 
-
 plot_loss_curves(loss_history, project_dir, 'Experiments_1_2/post-H-m1/results_post-H-m1/')  # Plotting function
-"""
-plot_path = os.path.join(project_dir, 'Experiments_1_2/post-H-m1/results_post-H-m1/')
-ensure_dir(plot_path)
-
-# Flatten nested lists if needed
-camcan_train = np.ravel(loss_history['CamCAN']['train'])
-camcan_val   = np.ravel(loss_history['CamCAN']['val'])
-sald_train   = np.ravel(loss_history['SALD']['train'])
-sald_val     = np.ravel(loss_history['SALD']['val'])
-
-# X-axis for epochs
-epochs_camcan = np.arange(1, len(camcan_train) + 1)
-epochs_sald   = np.arange(1, len(sald_train) + 1)
-
-# Plotting
-fig, axes = plt.subplots(1, 2, figsize=(20, 10))
-
-# CamCAN subplot
-axes[0].plot(epochs_camcan, camcan_train, label='Train Loss', color='blue', marker='o', markersize=2)
-axes[0].plot(epochs_camcan, camcan_val, label='Validation Loss', color='red', marker='o', markersize=2)
-axes[0].set_title("CamCAN Losses")
-axes[0].set_xlabel("Epoch")
-axes[0].set_ylabel("Loss")
-axes[0].legend()
-axes[0].grid(True)
-axes[0].set_xticks(np.arange(1, len(camcan_train) + 1, 200))
-
-# SALD subplot
-axes[1].plot(epochs_sald, sald_train, label='Train Loss', color='blue', marker='o', markersize=2)
-axes[1].plot(epochs_sald, sald_val, label='Validation Loss', color='red', marker='o', markersize=2)
-axes[1].set_title("SALD Losses")
-axes[1].set_xlabel("Epoch")
-axes[1].set_ylabel("Loss")
-axes[1].legend()
-axes[1].grid(True)
-axes[1].set_xticks(np.arange(1, len(sald_train) + 1, 200))
-
-# Finalize and save
-plt.tight_layout()
-plt.savefig(os.path.join(plot_path, 'losses.png'))
-plt.show()
-plt.close(fig)
-"""
 
 del model_global
 del best_model_silo

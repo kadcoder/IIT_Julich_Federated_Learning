@@ -1,12 +1,13 @@
-Description,Value
-Initial global model loss on central data,22.855554080009462
-
-Final Evaluation Results
-Test on CamCAN,Epochs: 200,Test MAE: 9.010649013519288
-Test on SALD,Epochs: 200,Test MAE: 4.772942304611206
-Test on eNKI,Epochs: 200,Test MAE: 8.09263563156128
-Final Evaluation Results on global model
-Test on CamCAN,Epochs: 200,Test MAE: 11.938200759887696
-Test on SALD,Epochs: 200,Test MAE: 7.135114669799805
-Test on eNKI,Epochs: 200,Test MAE: 8.09263563156128
-Total Time (mins),4.674556209333241
+Description,Value,
+Initial global model loss on central data,22.8555540800095,
+,,
+Final Evaluation Results,,
+Test on CamCAN,Epochs: 200,Test MAE: 9.360949516296387
+Test on SALD,Epochs: 200,Test MAE: 4.80412620306015
+Test on eNKI,Epochs: 200,Test MAE: 7.669775281633649
+,,
+Final Evaluation Results on global model,,
+Test on CamCAN,Epochs: 200,Test MAE: 12.008114051818847
+Test on SALD,Epochs: 200,Test MAE: 6.037006855010986
+Test on eNKI,Epochs: 200,Test MAE: 7.669775281633649
+Total Time (mins),5.35015598699295,

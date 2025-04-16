@@ -15,22 +15,22 @@ from lib.data_utils import preprocess                                           
 from lib.model import AgePredictor                                                                  # noqa                        
 from lib.utils import ensure_dir,plot_loss_curves                                                   # noqa
 from lib.data_utils import preprocess                                                               # noqa
-from lib.training import train_globalmodel, train_localmodelgrads                                   # noqa
+from lib.training import train_localglobal, train_globalmodel                                       # noqa
 from lib.evaluation import evaluate_model, predict_age                                              # noqa
 from lib.config import DEVICE
-from lib.harmonize import harmonize_localsilos
 #%%
 # #####################
 # Experiment parameters #######################
 Global_epoch = 200
 federated_epochs = 15
 dropout_rate = 0.2
-lr = 5e-4
+lr = 1e-3
 # Learning rate and scheduler setup
 current_lr = 5e-4 #1e-3
 gradient_clip = 1.0
 momentum = 0.8
 # #############################################
+
 
 silodata_path = os.path.join(project_dir, 'silo_Datasets')
 # TODO change enki
@@ -46,7 +46,7 @@ loss_history = {
     'eNki':   {'train': [], 'val': []}  # using 'train' to store avg_global_loss from train_globalmodel
 }
 total_samples = 0
-for silo in local_silos:
+for silo in all_silos:
     path = os.path.join(silodata_path, f'{silo}/Train_{silo}.csv')
     X, _, _ = preprocess(path)
     total_samples += X.shape[0]
@@ -56,17 +56,12 @@ model_global.initialize_weights(model_global)
 global_path = os.path.join(silodata_path, f'eNKI/Train_eNKI.csv')
 model_global, avg_global_loss, train_losses, val_losses = train_globalmodel(model_global,           # noqa
                                                                             global_path,            # noqa
-                                                                            total_samples)          # noqa        
-
-# Corrected usage
-initial_results_path = os.path.join(
-    project_dir, 
-    'Experiments_1_2/post-H-m2/results_post-H-m2/post-H-m2_l15.csv'
-)
-
-ensure_dir(initial_results_path)  # Ensures only the directory exists
+                                                                            total_samples,FINE_TUNE_EPOCHS=10) 
 
 # Save initial global loss to CSV
+initial_results_path = os.path.join(project_dir, 'Experiments_1_2/post-H-m3/results_post-H-m3/post-H-m3_l15.csv')
+ensure_dir(initial_results_path)  # Ensure the directory exists
+
 with open(initial_results_path, 'w', newline='') as csvfile:
     writer = csv.writer(csvfile)
     writer.writerow(['Description', 'Value'])
@@ -84,18 +79,17 @@ loss_history['SALD']['val'] = val_losses
 # Initialize momentum buffers
 velocity = {name: torch.zeros_like(param.data) for name, param in model_global.named_parameters()}      # noqa
 
-#f2 = open(f'pre-H_train_val_loss_localsilo_l15_{Global_epoch}.txt', 'w')
+
 silo_scalers = {}
 
 st_t = t.perf_counter()
-
 best_val_loss_silo = {silo: float('inf') for silo in local_silos}  # Initialize best validation loss for each silo
 best_model_silo = {silo: None for silo in local_silos}  # Initialize best model for each silo
 
 X_train_silo = {}
 y_train_silo = {}
 
-for silo in local_silos:  # Local Epochs
+for silo in all_silos:  # Local Epochs
     train_path = os.path.join(silodata_path, f'{silo}/Train_{silo}.csv')
 
     X, y, silo = preprocess(train_path)
@@ -103,23 +97,33 @@ for silo in local_silos:  # Local Epochs
     y_train_silo[silo] = y
 
 
-csv_loss_path = os.path.join(project_dir, f'Experiments_1_2/post-H-m2/results_post-H-m2/train_val_loss_localsilo_l15.csv')
+# Construct the full path to the CSV file
+csv_loss_path = os.path.join(
+    project_dir,
+    'Experiments_1_2/post-H-m3/results_post-H-m3/train_val_loss_localsilo_l15.csv'
+)
+ensure_dir(csv_loss_path)  # Ensure the directory exists
+
 with open(csv_loss_path, mode='w', newline='') as f2:
     writer = csv.writer(f2)
     writer.writerow(['Epoch', 'Silo', 'Train_MAE', 'Val_MAE'])  # header
+    
+    X_global, y_global = X_train_silo['eNKI'], y_train_silo['eNKI']
 
     for epoch in range(Global_epoch):
         aggregated_gradients = None
         silo_grads ={}
 
         for silo in local_silos:
-            print(f'Training on {silo}')
+            print(f"Round {epoch+1}: Training on {silo}")
             X_silo_current = X_train_silo[silo]
             y_silo_current = y_train_silo[silo]
 
-            grads, train_losses, val_losses, best_val_loss, best_model = train_localmodelgrads(
+            grads, train_losses, val_losses, best_val_loss, best_model = train_localglobal(
                 X_silo=X_silo_current,
                 y_silo=y_silo_current,
+                X_global=X_global,
+                y_global=y_global,
                 model=model_global,
                 total_samples=total_samples,
                 epochs=federated_epochs,
@@ -128,7 +132,6 @@ with open(csv_loss_path, mode='w', newline='') as f2:
 
             best_model_silo[silo] = best_model
             best_val_loss_silo[silo] = best_val_loss
-            silo_grads[f'{silo}'] = grads
 
             loss_history[f'{silo}']['train'].extend(train_losses)
             loss_history[f'{silo}']['val'].extend(val_losses)
@@ -138,7 +141,14 @@ with open(csv_loss_path, mode='w', newline='') as f2:
             avg_val_mae = sum(val_losses) / len(val_losses)
             writer.writerow([epoch + 1, silo, avg_train_mae, avg_val_mae])
 
-        aggregated_gradients = harmonize_localsilos(model_global,silo_grads)
+            # Aggregate gradients
+            if aggregated_gradients is None:
+                aggregated_gradients = grads
+            else:
+                aggregated_gradients = {
+                    key1: g1 + g2
+                    for (key1, g1), (key1, g2) in zip(aggregated_gradients.items(), grads.items())
+                }
 
         # Clip gradients
         if gradient_clip is not None:
@@ -160,6 +170,7 @@ f2.close()
 
 end_t = t.perf_counter()
 
+global_path = os.path.join(silodata_path, f'eNKI/Train_eNKI.csv')
 global_scaler = StandardScaler()
 X_train, _, _ = preprocess(global_path)
 global_scaler.fit(X_train)
@@ -174,7 +185,7 @@ for silo in local_silos:  # Local Epochs
     # Store the scaler for each silo in a dictionary
     silo_scalers[silo] = silo_scaler
 
-results_age_path = os.path.join(project_dir, 'Experiments_1_2/post-H-m2/results_post-H-m2/predictions')
+results_age_path = os.path.join(project_dir, 'Experiments_1_2/post-H-m3/results_post-H-m3/predictions')
 # Save final test results to the same CSV
 with open(initial_results_path, 'a', newline='') as csvfile:
     writer = csv.writer(csvfile)
@@ -205,9 +216,8 @@ with open(initial_results_path, 'a', newline='') as csvfile:
         writer.writerow([f'Test on {silo}', f'Epochs: {Global_epoch}', f'Test MAE: {avg_loss}'])
 
     writer.writerow(['Total Time (mins)', (end_t - st_t) / 60.0])
-
-plot_loss_curves(loss_history, project_dir, 'Experiments_1_2/post-H-m2/results_post-H-m2/')  # Plotting function
+    
+plot_loss_curves(loss_history, project_dir, 'Experiments_1_2/post-H-m3/results_post-H-m3/')  # Plotting function
 
 del model_global
 del best_model_silo
-    

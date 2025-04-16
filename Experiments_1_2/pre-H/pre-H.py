@@ -27,7 +27,7 @@ federated_epochs = 15
 dropout_rate = 0.2
 lr = 1e-3
 # Learning rate and scheduler setup
-current_lr = 1e-3
+current_lr = 5e-4 #1e-3
 gradient_clip = 1.0
 momentum = 0.8
 # #############################################

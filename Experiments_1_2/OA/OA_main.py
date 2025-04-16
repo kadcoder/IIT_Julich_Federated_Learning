@@ -20,7 +20,11 @@ max_epochs = 200
 silo_data_path = os.path.join(project_dir, 'silo_Datasets')
 # Set the path to save results
 results_csv_path = os.path.join(project_dir, 'Experiments_1_2/OA/results_OA')
-os.makedirs(results_csv_path, exist_ok=True)  #Create directory if missing
+ensure_dir(results_csv_path)  #Create directory if missing
+
+#Save results as .csv
+test_results_csv_path = os.path.join(results_csv_path,f'OA_results.csv')
+os.makedirs(os.path.dirname(test_results_csv_path), exist_ok=True)  #Create directory if missing
 
 for silo in ['CamCAN', 'SALD', 'eNKI']:
     # Store losses for plotting
@@ -55,10 +59,14 @@ for silo in ['CamCAN', 'SALD', 'eNKI']:
         writer.writerow(['Epoch', 'Train Loss', 'Val Loss'])  # Header row
         for epoch, (t_loss, v_loss) in enumerate(zip(train_losses, val_losses), start=1):
             writer.writerow([epoch, t_loss, v_loss])
-        # Write test MAE at the end
-        writer.writerow([])
-        writer.writerow(['Max Epochs', max_epochs])
-        writer.writerow(['Test MAE', avg_loss])
+
+    with open(test_results_csv_path, mode='a', newline='') as csvfile:
+        writer = csv.writer(csvfile)
+        # Write header row if the file is empty
+        if csvfile.tell() == 0:
+            writer.writerow(['Silo', 'Max Epochs', 'Test MAE'])
+        # Write the results for this silo
+        writer.writerow([silo, max_epochs, avg_loss])
 
     # Plot training and validation losses
     plt.figure(figsize=(10, 6))
