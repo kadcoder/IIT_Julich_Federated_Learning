@@ -87,7 +87,7 @@ def train_localmodelgrads(
     # Gradient clipping value
     torch.nn.utils.clip_grad_norm_(lmodel.parameters(), max_norm=1.0)
 
-    alignment_weight = 0.3
+    alignment_weight = 0.5
     global_model = copy.deepcopy(model).eval()  # Freeze for alignment
     best_model = None
     train_losses: List[float] = []
@@ -228,7 +228,7 @@ def train_localmodel(
     # Gradient clipping value
     torch.nn.utils.clip_grad_norm_(lmodel.parameters(), max_norm=1.0)
 
-    alignment_weight = 0.3  # Regularization weight for global-local alignment
+    alignment_weight = 0.5  # Regularization weight for global-local alignment
     global_model = copy.deepcopy(model).eval()  # Static reference
     best_model = None
     train_losses, val_losses = [], []
@@ -461,7 +461,7 @@ def train_localglobal(
         optimizer, T_max=epochs, eta_min=INIT_LR / 100
     )
 
-    alignment_weight = 0.3
+    alignment_weight = 0.5
     global_model = copy.deepcopy(model).eval()
     best_model = None
     train_losses, val_losses = [], []
