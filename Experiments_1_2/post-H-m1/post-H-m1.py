@@ -1,4 +1,5 @@
-#%%
+# %%
+# TODO: Add docstring to the script with the descrition
 import os
 import torch
 import time as t

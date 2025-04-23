@@ -60,7 +60,7 @@ model_global, avg_global_loss, train_losses, val_losses = train_globalmodel(mode
 
 # Corrected usage
 initial_results_path = os.path.join(
-    project_dir, 
+    project_dir,
     'Experiments_1_2/post-H-m2/results_post-H-m2/post-H-m2_l15.csv'
 )
 

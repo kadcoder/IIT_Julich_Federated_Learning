@@ -403,13 +403,14 @@ def train_globalmodel(
 
     return gmodel, avg_val_loss, train_losses, val_losses
 
+
 def train_localglobal(
-    X_silo: np.ndarray, 
-    y_silo: np.ndarray, 
-    X_global: np.ndarray, 
-    y_global: np.ndarray, 
-    model: torch.nn.Module, 
-    total_samples: int, 
+    X_silo: np.ndarray,
+    y_silo: np.ndarray,
+    X_global: np.ndarray,
+    y_global: np.ndarray,
+    model: torch.nn.Module,
+    total_samples: int,
     epochs: int,
     best_val_loss: float
 ) -> Tuple[Dict[str, torch.Tensor], List[float], List[float], float, torch.nn.Module]:
@@ -574,6 +575,7 @@ def train_localglobal(
     aggregated_grads = harmonize_localglobal(lmodel, epoch_lgrads, epoch_ggrads)
 
     return aggregated_grads, train_losses, val_losses, best_val_loss, best_model
+
 
 def train_centralmodel(train_path: str, max_epochs: int) -> Tuple[List[float], List[float], StandardScaler, torch.nn.Module]:
     """
