@@ -5,6 +5,7 @@ import pandas as pd
 import torch.nn as nn
 import matplotlib.pyplot as plt
 from typing import Tuple
+import copy
 from torch.utils.data import DataLoader, TensorDataset
 
 from lib.data_utils import preprocess
@@ -146,3 +147,56 @@ def predict_age(model: nn.Module, test_path: str, result_path: str, scaler) -> N
     os.makedirs(os.path.dirname(plot_path), exist_ok=True)
     plt.savefig(plot_path)
     plt.close()
+
+def compute_validation_loss(
+    gmodel: nn.Module,
+    val_loader: DataLoader,
+    criterion: nn.Module,
+    current_best_loss: float,
+    current_best_model: nn.Module,
+    device: torch.device = DEVICE
+) -> Tuple[float, nn.Module]:
+    """
+    Calculate validation loss and return the best model (either current or previous best)
+    
+    Parameters
+    ----------
+    gmodel : nn.Module
+        Current global model to evaluate
+    val_loader : DataLoader
+        Validation dataloader
+    criterion : nn.Module
+        Loss criterion
+    current_best_loss : float
+        Best validation loss from previous epochs
+    current_best_model : nn.Module
+        Best model from previous epochs
+    device : torch.device
+        Device for computation
+    
+    Returns
+    -------
+    Tuple[float, nn.Module]
+        Updated best validation loss and corresponding model
+    """
+    gmodel.eval()
+    total_loss = 0.0
+    
+    with torch.no_grad():
+        for X_batch, y_batch in val_loader:
+            X_batch, y_batch = X_batch.to(device), y_batch.to(device)
+            y_batch = y_batch.view(-1, 1)
+            
+            outputs = gmodel(X_batch).view(-1, 1)
+            loss = criterion(outputs, y_batch)
+            total_loss += loss.item()
+    
+    val_loss = total_loss / len(val_loader)
+    
+    # Compare with current best and return appropriate model
+    if val_loss < current_best_loss:
+        print(f"New best validation loss: {val_loss:.4f} (improved from {current_best_loss:.4f})")
+        return val_loss, copy.deepcopy(gmodel)
+    else:
+        print(f"Validation loss: {val_loss:.4f} (no improvement from {current_best_loss:.4f})")
+        return current_best_loss, current_best_model
