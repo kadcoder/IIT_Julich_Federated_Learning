@@ -19,9 +19,9 @@ from lib.utils import ensure_dir                                                
 # Set the maximum number of epochs for training
 max_epochs = 200
 # Set the path to the directory containing the silo datasets
-silo_data_path = os.path.join(project_dir, 'silo_Datasets')
+silo_data_path = os.path.join(project_dir, 'Experiments_1_2_eNKI/silo_Datasets')
 # Set the path to save results
-results_csv_path = os.path.join(project_dir, 'Experiments_1_2/OB/results_OB')
+results_csv_path = os.path.join(project_dir, 'Experiments_1_2_eNKI/OB/results_OB')
 os.makedirs(results_csv_path, exist_ok=True)  #Create directory if missing
 
 silos = ['CamCAN', 'SALD','eNKI']
@@ -55,7 +55,7 @@ plt.close()
 #Save results as .csv
 csv_filename_path = os.path.join(results_csv_path,'OB_results.csv')
 os.makedirs(os.path.dirname(csv_filename_path), exist_ok=True)  #Create directory if missing
-results_age_path = os.path.join(project_dir, 'Experiments_1_2/OB/results_OB/predictions')
+results_age_path = os.path.join(project_dir, 'Experiments_1_2_eNKI/OB/results_OB/predictions')
 ensure_dir(results_age_path)  # Ensure the directory exists
 
 # Open the CSV file once for writing
