@@ -1,4 +1,4 @@
-#%%
+# %%
 import torch
 import torch.nn as nn
 from typing import Tuple, List, Dict
@@ -14,9 +14,10 @@ from lib.model import AgePredictor
 from lib.data_utils import preprocess, dataloader, compute_gradients
 from lib.config import INIT_LR, DEVICE, WEIGHT_DECAY, GRADIENT_CLIP
 from lib.harmonize import harmonize_localglobal
-#%%
+# %%
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"  # Replace "0" with your desired GPU ID
+
 
 def train_localmodelgrads(
     X_silo: np.ndarray,
@@ -24,7 +25,7 @@ def train_localmodelgrads(
     model: nn.Module,
     total_samples: int,
     epochs: int,
-    best_val_loss: float
+    best_val_loss: float,
 ) -> Tuple[Dict[str, dict], List[float], List[float], float, nn.Module]:
     """
     Trains a local model on silo-specific data, records parameter gradients
@@ -77,12 +78,16 @@ def train_localmodelgrads(
     print(f"validation dataset shape: {X_val.shape}")
 
     # Convert to dataloaders
-    train_loader = dataloader(X_train, y_train, 'train')
+    train_loader = dataloader(X_train, y_train, "train")
     val_loader = dataloader(X_val, y_val)
 
     criterion = nn.L1Loss()
-    optimizer = torch.optim.SGD(lmodel.parameters(), lr=INIT_LR, momentum=0.9, weight_decay=WEIGHT_DECAY)
-    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=epochs, eta_min=INIT_LR / 100)
+    optimizer = torch.optim.SGD(
+        lmodel.parameters(), lr=INIT_LR, momentum=0.9, weight_decay=WEIGHT_DECAY
+    )
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+        optimizer, T_max=epochs, eta_min=INIT_LR / 100
+    )
 
     # Gradient clipping value
     torch.nn.utils.clip_grad_norm_(lmodel.parameters(), max_norm=1.0)
@@ -108,9 +113,11 @@ def train_localmodelgrads(
 
             alignment_loss = sum(
                 torch.norm(l_param - g_param.detach(), p=2)
-                for l_param, g_param in zip(lmodel.parameters(), global_model.parameters())
+                for l_param, g_param in zip(
+                    lmodel.parameters(), global_model.parameters()
+                )
             )
-            #print(f"Predictions:{predictions} and alignment_loss: {alignment_loss}")
+            # print(f"Predictions:{predictions} and alignment_loss: {alignment_loss}")
 
             total_loss = loss + alignment_weight * alignment_loss
             total_loss.backward()
@@ -136,7 +143,10 @@ def train_localmodelgrads(
         total_val_loss = 0.0
         with torch.no_grad():
             for X_val_batch, y_val_batch in val_loader:
-                X_val_batch, y_val_batch = X_val_batch.to(DEVICE), y_val_batch.to(DEVICE)
+                X_val_batch, y_val_batch = (
+                    X_val_batch.to(DEVICE),
+                    y_val_batch.to(DEVICE),
+                )
                 y_val_batch = y_val_batch.view(-1, 1)
                 val_predictions = lmodel(X_val_batch).view(-1, 1)
                 loss = criterion(val_predictions, y_val_batch)
@@ -152,7 +162,7 @@ def train_localmodelgrads(
     avg_train_loss = sum(train_losses) / len(train_losses)
     avg_val_loss = sum(val_losses) / len(val_losses)
 
-    print(f'Train loss :{avg_train_loss:.4f} and Val loss :{avg_val_loss:.4f}')
+    print(f"Train loss :{avg_train_loss:.4f} and Val loss :{avg_val_loss:.4f}")
 
     if best_model is None:
         best_model = lmodel  # fallback to last model
@@ -166,7 +176,7 @@ def train_localmodel(
     model: nn.Module,
     total_samples: int,
     epochs: int,
-    best_val_loss: float
+    best_val_loss: float,
 ) -> Tuple[dict, List[float], List[float], float, nn.Module]:
     """
     Trains a local model on silo-specific data with alignment to a global model.
@@ -210,32 +220,32 @@ def train_localmodel(
     X_train = scaler.fit_transform(X_train_inner)
     X_val = scaler.transform(X_val_raw)
 
-    lmodel = copy.deepcopy(model)
+    local_model = copy.deepcopy(model)
     print(f"train dataset shape: {X_train.shape}")
     print(f"validation dataset shape: {X_val.shape}")
 
     # Convert to dataloaders
-    train_loader = dataloader(X_train, y_train, 'train')
+    train_loader = dataloader(X_train, y_train, "train")
     val_loader = dataloader(X_val, y_val)
 
     criterion = nn.L1Loss()
     optimizer = torch.optim.SGD(
-        lmodel.parameters(), lr=INIT_LR, momentum=0.9, weight_decay=WEIGHT_DECAY
+        local_model.parameters(), lr=INIT_LR, momentum=0.9, weight_decay=WEIGHT_DECAY
     )
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
         optimizer, T_max=epochs, eta_min=INIT_LR / 100
     )
 
     # Gradient clipping value
-    torch.nn.utils.clip_grad_norm_(lmodel.parameters(), max_norm=1.0)
+    torch.nn.utils.clip_grad_norm_(local_model.parameters(), max_norm=1.0)
 
     alignment_weight = 0.5  # Regularization weight for global-local alignment
     global_model = copy.deepcopy(model).eval()  # Static reference
-    best_model = None
+    best_local_model = None
     train_losses, val_losses = [], []
 
     for epoch in range(epochs):
-        lmodel.train()
+        local_model.train()
         total_train_loss = 0.0
         total_alignment_loss = 0.0
 
@@ -244,7 +254,7 @@ def train_localmodel(
             y_batch = y_batch.view(-1, 1)
 
             optimizer.zero_grad()
-            predictions = lmodel(X_batch).view(-1, 1)
+            predictions = local_model(X_batch).view(-1, 1)
 
             # Primary loss
             loss = criterion(predictions, y_batch)
@@ -252,14 +262,16 @@ def train_localmodel(
             # Alignment loss with global model
             alignment_loss = sum(
                 torch.norm(l_param - g_param.detach(), p=2)
-                for l_param, g_param in zip(lmodel.parameters(), global_model.parameters())
+                for l_param, g_param in zip(
+                    local_model.parameters(), global_model.parameters()
+                )
             )
 
             total_loss = loss + alignment_weight * alignment_loss
             total_loss.backward()
 
             # Clip gradients
-            torch.nn.utils.clip_grad_norm_(lmodel.parameters(), GRADIENT_CLIP)
+            torch.nn.utils.clip_grad_norm_(local_model.parameters(), GRADIENT_CLIP)
             optimizer.step()
 
             total_train_loss += loss.item()
@@ -270,13 +282,16 @@ def train_localmodel(
         train_losses.append(avg_train_loss)
 
         # Validation phase
-        lmodel.eval()
+        local_model.eval()
         total_val_loss = 0.0
         with torch.no_grad():
             for X_val_batch, y_val_batch in val_loader:
-                X_val_batch, y_val_batch = X_val_batch.to(DEVICE), y_val_batch.to(DEVICE)
+                X_val_batch, y_val_batch = (
+                    X_val_batch.to(DEVICE),
+                    y_val_batch.to(DEVICE),
+                )
                 y_val_batch = y_val_batch.view(-1, 1)
-                val_predictions = lmodel(X_val_batch).view(-1, 1)
+                val_predictions = local_model(X_val_batch).view(-1, 1)
                 loss = criterion(val_predictions, y_val_batch)
                 total_val_loss += loss.item()
 
@@ -285,25 +300,27 @@ def train_localmodel(
 
         if avg_val_loss < best_val_loss:
             best_val_loss = avg_val_loss
-            best_model = copy.deepcopy(lmodel)
+            best_local_model = copy.deepcopy(local_model)
 
     # Fallback in case no improvement
-    if best_model is None:
-        best_model = lmodel
+    if best_local_model is None:
+        best_local_model = model
 
     # Compute gradients
-    local_gradients = compute_gradients(lmodel, criterion, X_train, y_train, total_samples)
+    local_gradients = compute_gradients(
+        local_model, criterion, X_train, y_train, total_samples
+    )
 
-    print(f'Train loss :{sum(train_losses)/len(train_losses):.4f} and Val loss :{sum(val_losses)/len(val_losses):.4f}')
+    print(
+        f"Train loss :{sum(train_losses) / len(train_losses):.4f} and Val loss :{sum(val_losses) / len(val_losses):.4f}"
+    )
 
-    return local_gradients, train_losses, val_losses, best_val_loss, best_model
+    return local_gradients, train_losses, val_losses, best_val_loss, best_local_model
+
 
 def train_globalmodel(
-    gmodel: nn.Module,
-    global_train_path: str,
-    total_samples: int,
-    FINE_TUNE_EPOCHS: int = 10
-) -> Tuple[nn.Module, float, List[float], List[float]]:
+    gmodel: nn.Module, global_train_path: str, FINE_TUNE_EPOCHS: int = 10
+) -> Tuple[nn.Module, List[float], List[float], dict]:
     """
     Trains (fine-tunes) the global model using data from the provided path.
 
@@ -313,8 +330,6 @@ def train_globalmodel(
         The PyTorch model to be trained globally.
     global_train_path : str
         Path to the global training dataset.
-    total_samples : int
-        Total number of samples across all data sources (used for consistency).
     FINE_TUNE_EPOCHS : int, optional
         Number of epochs to fine-tune the model, by default 10.
 
@@ -346,22 +361,23 @@ def train_globalmodel(
     print(f"validation dataset shape: {X_val.shape}")
 
     # Convert to tensor-based dataloaders
-    train_loader = dataloader(X_train, y_train, 'train')
+    train_loader = dataloader(X_train, y_train, "train")
     val_loader = dataloader(X_val, y_val)
 
-    optimizer = optim.SGD(gmodel.parameters(), lr=INIT_LR, momentum=0.9,
-                          weight_decay=WEIGHT_DECAY)
+    optimizer = optim.SGD(
+        gmodel.parameters(), lr=INIT_LR, momentum=0.9, weight_decay=WEIGHT_DECAY
+    )
     criterion = nn.L1Loss()
 
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(
-        optimizer, mode='min', factor=0.5, patience=2, verbose=True
+        optimizer, mode="min", factor=0.5, patience=2, verbose=True
     )
-    global_dict['val_dataloader'] = val_loader
-    global_dict['criterion'] = criterion
+    global_dict["val_dataloader"] = val_loader
+    global_dict["criterion"] = criterion
 
     train_losses, val_losses = [], []
     best_model = None
-    best_val_loss = float('inf')
+    best_val_loss = float("inf")
 
     for epoch in range(FINE_TUNE_EPOCHS):
         gmodel.train()
@@ -397,35 +413,42 @@ def train_globalmodel(
                 total_val_loss += val_loss.item()
 
         val_loss_epoch = total_val_loss / len(val_loader)
+        # Update the best model if current validation loss is lower
         if val_loss < best_val_loss:
             best_val_loss = val_loss
+            best_epoch = epoch
             best_model = copy.deepcopy(gmodel)
 
         val_losses.append(val_loss_epoch)
 
         scheduler.step(val_loss_epoch)
 
-        #print(f"Epoch {epoch+1}/{FINE_TUNE_EPOCHS} - "f"Train Loss: {train_loss:.4f}, Val Loss: {val_loss_epoch:.4f}")
-    
-    if best_model is None:
-        best_model = gmodel
+        # print(f"Epoch {epoch+1}/{FINE_TUNE_EPOCHS} - "f"Train Loss: {train_loss:.4f}, Val Loss: {val_loss_epoch:.4f}")
+
 
     avg_val_loss = sum(val_losses) / len(val_losses)
-    print(f'Avg loss on global data of {silo}: {sum(train_losses)/len(train_losses):.4f}')
-    print(f'Best loss on validation data of {silo}: {best_val_loss:.4f}')
-    global_dict['validation_loss'] = best_val_loss
+    avg_train_loss = sum(train_losses) / len(train_losses)
+    print(
+        f"Avg loss on global data of {silo}: {avg_train_loss:.4f}"
+    )
+    print(f"Best loss on validation data of {silo}: {best_val_loss:.4f}")
+    global_dict["best_validation_loss"] = best_val_loss
+    global_dict["average_validation_loss"] = avg_val_loss
+    global_dict["average_train_loss"] = avg_train_loss
+    global_dict["best_best_epoch"] = best_epoch
 
-    return best_model, avg_val_loss, train_losses, val_losses, global_dict
+    return best_model, train_losses, val_losses, global_dict
+
 
 def train_localglobal(
-    X_silo: np.ndarray, 
-    y_silo: np.ndarray, 
-    X_global: np.ndarray, 
-    y_global: np.ndarray, 
-    model: torch.nn.Module, 
-    total_samples: int, 
+    X_silo: np.ndarray,
+    y_silo: np.ndarray,
+    X_global: np.ndarray,
+    y_global: np.ndarray,
+    model: torch.nn.Module,
+    total_samples: int,
     epochs: int,
-    best_val_loss: float
+    best_val_loss: float,
 ) -> Tuple[Dict[str, torch.Tensor], List[float], List[float], float, torch.nn.Module]:
     """
     Trains a local model with alignment to the global model, then updates the global model
@@ -464,7 +487,7 @@ def train_localglobal(
     print(f"train dataset shape: {X_train.shape}")
     print(f"validation dataset shape: {X_val.shape}")
 
-    train_loader = dataloader(X_train, y_train, 'train')
+    train_loader = dataloader(X_train, y_train, "train")
     val_loader = dataloader(X_val, y_val)
 
     criterion = torch.nn.L1Loss()
@@ -495,9 +518,11 @@ def train_localglobal(
 
             alignment_loss = sum(
                 torch.norm(l_param - g_param.detach(), p=2)
-                for l_param, g_param in zip(lmodel.parameters(), global_model.parameters())
+                for l_param, g_param in zip(
+                    lmodel.parameters(), global_model.parameters()
+                )
             )
-            #print(f"Predictions:{predictions} and alignment_loss: {alignment_loss}")
+            # print(f"Predictions:{predictions} and alignment_loss: {alignment_loss}")
 
             total_loss = loss + alignment_weight * alignment_loss
             total_loss.backward()
@@ -510,13 +535,18 @@ def train_localglobal(
         scheduler.step()
         train_loss = total_train_loss / len(train_loader)
         train_losses.append(train_loss)
-        epoch_lgrads[f'{epoch+1}'] = compute_gradients(lmodel, criterion, X_train, y_train, total_samples)
+        epoch_lgrads[f"{epoch + 1}"] = compute_gradients(
+            lmodel, criterion, X_train, y_train, total_samples
+        )
 
         lmodel.eval()
         total_val_loss = 0
         with torch.no_grad():
             for X_val_batch, y_val_batch in val_loader:
-                X_val_batch, y_val_batch = X_val_batch.to(DEVICE), y_val_batch.to(DEVICE)
+                X_val_batch, y_val_batch = (
+                    X_val_batch.to(DEVICE),
+                    y_val_batch.to(DEVICE),
+                )
                 y_val_batch = y_val_batch.view(-1, 1)
                 predictions = lmodel(X_val_batch).view(-1, 1)
                 loss = criterion(predictions, y_val_batch)
@@ -544,11 +574,15 @@ def train_localglobal(
     print(f"train dataset shape: {X_train.shape}")
     print(f"validation dataset shape: {X_val.shape}")
 
-    train_loader = dataloader(X_train, y_train, 'train')
+    train_loader = dataloader(X_train, y_train, "train")
     val_loader = dataloader(X_val, y_val)
 
-    optimizer = optim.SGD(globalmodel.parameters(), lr=INIT_LR, momentum=0.9, weight_decay=WEIGHT_DECAY)
-    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=2, verbose=True)
+    optimizer = optim.SGD(
+        globalmodel.parameters(), lr=INIT_LR, momentum=0.9, weight_decay=WEIGHT_DECAY
+    )
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+        optimizer, mode="min", factor=0.5, patience=2, verbose=True
+    )
 
     gtrain_losses, gval_losses = [], []
 
@@ -568,13 +602,18 @@ def train_localglobal(
 
         train_loss = total_train_loss / len(train_loader)
         gtrain_losses.append(train_loss)
-        epoch_ggrads[f'{epoch+1}'] = compute_gradients(lmodel, criterion, X_train, y_train, total_samples)
+        epoch_ggrads[f"{epoch + 1}"] = compute_gradients(
+            lmodel, criterion, X_train, y_train, total_samples
+        )
 
         globalmodel.eval()
         total_val_loss = 0
         with torch.no_grad():
             for X_val_batch, y_val_batch in val_loader:
-                X_val_batch, y_val_batch = X_val_batch.to(DEVICE), y_val_batch.to(DEVICE)
+                X_val_batch, y_val_batch = (
+                    X_val_batch.to(DEVICE),
+                    y_val_batch.to(DEVICE),
+                )
                 y_val_batch = y_val_batch.view(-1, 1)
                 val_predictions = globalmodel(X_val_batch).view(-1, 1)
                 loss = criterion(val_predictions, y_val_batch)
@@ -585,20 +624,21 @@ def train_localglobal(
         scheduler.step(val_loss)
 
     avg_train_loss = sum(gtrain_losses) / len(gtrain_losses)
-    print(f'Train loss :{avg_train_loss} and Val loss :{val_loss}')
+    print(f"Train loss :{avg_train_loss} and Val loss :{val_loss}")
     aggregated_grads = harmonize_localglobal(lmodel, epoch_lgrads, epoch_ggrads)
 
     return aggregated_grads, train_losses, val_losses, best_val_loss, best_model
 
+
 def train_globalgrads(
-    X_silo: np.ndarray, 
-    y_silo: np.ndarray, 
-    X_global: np.ndarray, 
-    y_global: np.ndarray, 
-    model: torch.nn.Module, 
-    total_samples: int, 
+    X_silo: np.ndarray,
+    y_silo: np.ndarray,
+    X_global: np.ndarray,
+    y_global: np.ndarray,
+    model: torch.nn.Module,
+    total_samples: int,
     epochs: int,
-    best_val_loss: float
+    best_val_loss: float,
 ) -> Tuple[Dict[str, torch.Tensor], List[float], List[float], float, torch.nn.Module]:
     """
     Trains a local model with alignment to the global model, then updates the global model
@@ -637,7 +677,7 @@ def train_globalgrads(
     print(f"train dataset shape: {X_train.shape}")
     print(f"validation dataset shape: {X_val.shape}")
 
-    train_loader = dataloader(X_train, y_train, 'train')
+    train_loader = dataloader(X_train, y_train, "train")
     val_loader = dataloader(X_val, y_val)
 
     criterion = torch.nn.L1Loss()
@@ -668,7 +708,9 @@ def train_globalgrads(
 
             alignment_loss = sum(
                 torch.norm(l_param - g_param.detach(), p=2)
-                for l_param, g_param in zip(lmodel.parameters(), global_model.parameters())
+                for l_param, g_param in zip(
+                    lmodel.parameters(), global_model.parameters()
+                )
             )
 
             total_loss = loss + alignment_weight * alignment_loss
@@ -682,13 +724,18 @@ def train_globalgrads(
         scheduler.step()
         train_loss = total_train_loss / len(train_loader)
         train_losses.append(train_loss)
-        epoch_lgrads[f'{epoch+1}'] = compute_gradients(lmodel, criterion, X_train, y_train, total_samples)
+        epoch_lgrads[f"{epoch + 1}"] = compute_gradients(
+            lmodel, criterion, X_train, y_train, total_samples
+        )
 
         lmodel.eval()
         total_val_loss = 0
         with torch.no_grad():
             for X_val_batch, y_val_batch in val_loader:
-                X_val_batch, y_val_batch = X_val_batch.to(DEVICE), y_val_batch.to(DEVICE)
+                X_val_batch, y_val_batch = (
+                    X_val_batch.to(DEVICE),
+                    y_val_batch.to(DEVICE),
+                )
                 y_val_batch = y_val_batch.view(-1, 1)
                 predictions = lmodel(X_val_batch).view(-1, 1)
                 loss = criterion(predictions, y_val_batch)
@@ -716,11 +763,15 @@ def train_globalgrads(
     print(f"train dataset shape: {X_train.shape}")
     print(f"validation dataset shape: {X_val.shape}")
 
-    train_loader = dataloader(X_train, y_train, 'train')
+    train_loader = dataloader(X_train, y_train, "train")
     val_loader = dataloader(X_val, y_val)
 
-    optimizer = optim.SGD(globalmodel.parameters(), lr=INIT_LR, momentum=0.9, weight_decay=WEIGHT_DECAY)
-    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=2, verbose=True)
+    optimizer = optim.SGD(
+        globalmodel.parameters(), lr=INIT_LR, momentum=0.9, weight_decay=WEIGHT_DECAY
+    )
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+        optimizer, mode="min", factor=0.5, patience=2, verbose=True
+    )
 
     gtrain_losses, gval_losses = [], []
 
@@ -740,13 +791,18 @@ def train_globalgrads(
 
         train_loss = total_train_loss / len(train_loader)
         gtrain_losses.append(train_loss)
-        epoch_ggrads[f'{epoch+1}'] = compute_gradients(lmodel, criterion, X_train, y_train, total_samples)
+        epoch_ggrads[f"{epoch + 1}"] = compute_gradients(
+            lmodel, criterion, X_train, y_train, total_samples
+        )
 
         globalmodel.eval()
         total_val_loss = 0
         with torch.no_grad():
             for X_val_batch, y_val_batch in val_loader:
-                X_val_batch, y_val_batch = X_val_batch.to(DEVICE), y_val_batch.to(DEVICE)
+                X_val_batch, y_val_batch = (
+                    X_val_batch.to(DEVICE),
+                    y_val_batch.to(DEVICE),
+                )
                 y_val_batch = y_val_batch.view(-1, 1)
                 val_predictions = globalmodel(X_val_batch).view(-1, 1)
                 loss = criterion(val_predictions, y_val_batch)
@@ -757,12 +813,14 @@ def train_globalgrads(
         scheduler.step(val_loss)
 
     avg_train_loss = sum(gtrain_losses) / len(gtrain_losses)
-    print(f'Train loss :{avg_train_loss} and Val loss :{val_loss}')
+    print(f"Train loss :{avg_train_loss} and Val loss :{val_loss}")
 
     return epoch_ggrads, train_losses, val_losses, best_val_loss, best_model
 
 
-def train_centralmodel(train_path: str, max_epochs: int) -> Tuple[List[float], List[float], StandardScaler, torch.nn.Module]:
+def train_centralmodel(
+    train_path: str, max_epochs: int
+) -> Tuple[List[float], List[float], StandardScaler, torch.nn.Module]:
     """
     Trains a centralized model on all available data and returns loss history, scaler, and best model.
 
@@ -787,7 +845,7 @@ def train_centralmodel(train_path: str, max_epochs: int) -> Tuple[List[float], L
     X_train = scaler.fit_transform(X_train_inner)
     X_val = scaler.transform(X_val_raw)
 
-    train_loader = dataloader(X_train, y_train, 'train')
+    train_loader = dataloader(X_train, y_train, "train")
     val_loader = dataloader(X_val, y_val)
 
     model = AgePredictor(X_train.shape[1]).to(DEVICE)
@@ -797,7 +855,7 @@ def train_centralmodel(train_path: str, max_epochs: int) -> Tuple[List[float], L
     optimizer = optim.SGD(model.parameters(), lr=1e-3, weight_decay=1e-5)
 
     train_losses, val_losses = [], []
-    best_val_loss = float('inf')
+    best_val_loss = float("inf")
     best_model = None
 
     for epoch in range(max_epochs):
@@ -821,7 +879,10 @@ def train_centralmodel(train_path: str, max_epochs: int) -> Tuple[List[float], L
         total_val_loss = 0
         with torch.no_grad():
             for X_val_batch, y_val_batch in val_loader:
-                X_val_batch, y_val_batch = X_val_batch.to(DEVICE), y_val_batch.to(DEVICE)
+                X_val_batch, y_val_batch = (
+                    X_val_batch.to(DEVICE),
+                    y_val_batch.to(DEVICE),
+                )
                 y_val_batch = y_val_batch.view(-1, 1)
                 predictions = model(X_val_batch).view(-1, 1)
                 loss = criterion(predictions, y_val_batch)

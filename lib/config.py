@@ -1,14 +1,15 @@
 import torch
 import numpy as np
 
+
+def set_random_seed(SEED)
+    torch.manual_seed(SEED)
+    np.random.seed(SEED)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+
 # Configuration
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-SEED = 42
-torch.manual_seed(SEED)
-np.random.seed(SEED)
-torch.backends.cudnn.deterministic = True
-torch.backends.cudnn.benchmark = False
-
 # Global constants
 BATCH_SIZE = 32
 INIT_LR = 1e-3
