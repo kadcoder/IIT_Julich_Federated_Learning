@@ -1,9 +1,39 @@
 #%%
 import os
+import torch
 import numpy as np
 import matplotlib.pyplot as plt
 from typing import Dict, List, Union
 #%%
+
+def set_parameters(SEED: int = 42) -> None:
+    torch.manual_seed(SEED)
+    np.random.seed(SEED)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+
+def select_device(preferred_id=None):
+    """
+    Returns a torch.device on the first valid CUDA index (or the user-specified one),
+    or CPU if CUDA isn’t available or the index is out of range.
+    """
+    if not torch.cuda.is_available():
+        print("CUDA not available → using CPU")
+        return torch.device("cpu")
+
+    n_gpus = torch.cuda.device_count()
+    print(f"Found {n_gpus} CUDA device(s):")
+    for i in range(n_gpus):
+        print(f"  [{i}]: {torch.cuda.get_device_name(i)}")
+
+    # If the user passed a preferred_id and it’s in range, use it.
+    if preferred_id is not None and 0 <= preferred_id < n_gpus:
+        print(f"Using user-specified GPU: {preferred_id}")
+        return torch.device(f"cuda:{preferred_id}")
+
+    # Otherwise pick GPU 0 by default
+    print("Falling back to GPU 0")
+    return torch.device("cuda:0")
 
 def ensure_dir(file_path: str) -> None:
     """

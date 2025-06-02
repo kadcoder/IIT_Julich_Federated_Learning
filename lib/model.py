@@ -29,7 +29,7 @@ class AgePredictor(nn.Module):
         
         # First hidden layer
         self.fc1 = nn.Linear(input_size, 512)
-        self.bn1 = nn.BatchNorm1d(512)
+        self.bn1 = nn.BatchNorm1d(512) #, affine=True, track_running_stats=False
         self.act1 = nn.LeakyReLU(0.01)
         self.drop1 = nn.Dropout(dropout_rate)
         

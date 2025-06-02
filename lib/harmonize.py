@@ -8,63 +8,28 @@ from neuroCombat import neuroCombat
 from lib.data_utils import train_combat, apply_combat_harmonization
 #%%
 
-def feature_harmonization(
-    silodata_path: str,
-    silo_name: str,
-    global_name: str
-) -> str:
-    """
-    Harmonizes features from a silo using ComBat, applying the learned parameters to the test set.
-
-    Parameters:
-    -----------
-    silodata_path : str
-        Path to the silo's training and test datasets.
-
-    silo_name : str
-        Name of the local silo (used for training ComBat harmonization).
-
-    global_name : str
-        Name of the global model or reference batch for ComBat training.
-
-    Returns:
-    --------
-    harmonized_test_path : str
-        Path to the harmonized test set saved as a CSV file.
-    """
-
-    # Step 1: Train ComBat harmonization model on the silo's training data
-    harmonized_output, silo_test_path = train_combat(
-        silodata_path=silodata_path,
-        silo_name=silo_name,
-        global_name=global_name
-    )
-
-    # Step 2: Prepare ComBat parameters for applying to test data
+def feature_harmonization(silodata_path, silo_name, global_name):
+     
+    harmonized_output,silo_test_path = train_combat(silodata_path, silo_name, global_name)
+    # After initial harmonization
     combat_params = {
         "estimates": harmonized_output["estimates"],
         "batch_col": "batch",
         "categorical_cols": []
     }
-
-    # Step 3: Apply trained ComBat harmonization to the test data
+    
     harmonized_test_df = apply_combat_harmonization(
         test_path=silo_test_path,
         combat_params=combat_params,
         batch_col='batch',
         categorical_cols=[]
     )
-
-    # Step 4: Save the harmonized test data to a new path
-    harmonized_test_path = silo_test_path.replace('Test', 'Test_harmonized')
-    harmonized_test_df.to_csv(harmonized_test_path, index=False)
-
-    return harmonized_test_path
+    harmonized_test_path = silo_test_path.replace('Test','Test_harmonized')
+    harmonized_test_df.to_csv(harmonized_test_path)
 
 def harmonize_localsilos(
     model: nn.Module,
-    gradients: Dict[str, Dict[int, Dict[str, torch.Tensor]]],federated_epochs: int
-) -> Dict[str, torch.Tensor]:
+    gradients: Dict[str, Dict[int, Dict[str, torch.Tensor]]],federated_epochs: int) -> Dict[str, torch.Tensor]:
     """
     Harmonizes gradients from multiple silos using neuroCombat to mitigate site/batch effects.
 
@@ -96,7 +61,7 @@ def harmonize_localsilos(
 
     for name, param in model.named_parameters():
         # Harmonize only fully connected layers (excluding last layer's bias)
-        if name.startswith('fc') and name != 'fc4.bias':
+        if name.startswith('fc') and name != 'fc4.bias': #name.startswith('fc') and 
             data_combined_list = []  # List to store flattened gradients per silo
             covars = {'batch': []}   # Covariate info for neuroCombat
 
@@ -201,7 +166,7 @@ def harmonize_localglobal(
 
     for name, param in model.named_parameters():
         # Harmonize only selected layers
-        if name.startswith('fc') and name != 'fc4.bias':
+        if name.startswith('fc') and name != 'fc4.bias': #name.startswith('fc') and 
             data_combined_list = []  # Store gradients for 'local' and 'global'
             covars = {'batch': []}
 

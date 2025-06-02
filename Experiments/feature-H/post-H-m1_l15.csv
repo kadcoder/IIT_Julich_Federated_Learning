@@ -1,0 +1,19 @@
+Description,Value
+Initial global model loss on central data,16.77025351524353
+
+Final Evaluation Results on best silo(s)
+Test on CamCAN,Epochs: 200,Test MAE: 5.391656112670899
+Test on SALD,Epochs: 200,Test MAE: 5.104286789894104
+Test on eNKI,Epochs: 200,Test MAE: 4.563165494373867
+
+Final Evaluation Results on best global model : 41
+Test on CamCAN,Epochs: 200,Test MAE: 5.759407949447632
+Test on SALD,Epochs: 200,Test MAE: 4.237910240888596
+Test on eNKI,Epochs: 200,Test MAE: 4.563165494373867
+
+Final Evaluation Results on global model
+Test on CamCAN,Epochs: 200,Test MAE: 5.386333465576172
+Test on SALD,Epochs: 200,Test MAE: 5.10343337059021
+Test on eNKI,Epochs: 200,Test MAE: 4.7522406237466
+
+Total Time (mins),21.243390974701228
