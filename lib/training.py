@@ -35,53 +35,6 @@ def gaussian_kernel(x: torch.Tensor,
     kernel_vals = [torch.exp(-L2_dist / sigma) for sigma in sigmas]
     return sum(kernel_vals)
 
-def imq_kernel(x: torch.Tensor,
-               y: torch.Tensor,
-               C: float = 1.0) -> torch.Tensor:
-    """
-    Builds an Inverse Multi‐Quadratic (IMQ) kernel matrix between x and y:
-        k(x,y) = C / (C + ||x - y||^2)
-    """
-    total = torch.cat([x, y], dim=0)
-    # pairwise squared L2 distances
-    L2_dist = (
-        total.pow(2).sum(1, keepdim=True)
-        - 2 * total @ total.t()
-        + total.pow(2).sum(1, keepdim=True).t()
-    )
-    return C / (C + L2_dist)
-
-def laplacian_kernel(x: torch.Tensor,
-                     y: torch.Tensor,
-                     sigma: float = 1.0) -> torch.Tensor:
-    """
-    Builds a Laplacian (L1) kernel matrix between x and y:
-        k(x,y) = exp( -||x - y|| / sigma )
-    """
-    total = torch.cat([x, y], dim=0)
-    # pairwise L1 distances
-    abs_diff = torch.cdist(total, total, p=1)
-    return torch.exp(-abs_diff / sigma)
-
-def mmd2_with_kernel(x: torch.Tensor,
-                     y: torch.Tensor,
-                     kernel_fn,
-                     **kernel_kwargs) -> torch.Tensor:
-    """
-    Computes squared‐MMD between x and y using a provided kernel function:
-      MMD^2 = E[k(x,x)] + E[k(y,y)] - 2 E[k(x,y)]
-    Args:
-        x, y:       Tensors of shape (batch_size, features)
-        kernel_fn:  function(x, y, **kernel_kwargs) -> full (2N x 2N) kernel matrix
-        kernel_kwargs: extra args for kernel_fn
-    """
-    batch_size = x.size(0)
-    K = kernel_fn(x, y, **kernel_kwargs)
-    XX = K[:batch_size, :batch_size]
-    YY = K[batch_size:, batch_size:]
-    XY = K[:batch_size, batch_size:]
-    return XX.mean() + YY.mean() - 2 * XY.mean()
-
 def mmd2(x: torch.Tensor,
          y: torch.Tensor,
          kernel_mul: float = 2.0,
